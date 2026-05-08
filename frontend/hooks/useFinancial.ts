@@ -1,19 +1,75 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { financialApi } from "@/lib/financial-api";
 import { useFinancialStore } from "@/store/useFinancialStore";
 import { FinancialQuery } from "@/types/financial";
 
-// Market/ticker hooks can be upgraded to query-backed fetches without changing callers.
 export function useTickerData(ticker: string | null) {
-  void ticker;
-  return { data: null, isLoading: false, error: null };
+  const setStockData = useFinancialStore((s) => s.setStockData);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ticker) return;
+    let cancelled = false;
+
+    setIsLoading(true);
+    setError(null);
+
+    fetch(`/api/financial/ticker/${encodeURIComponent(ticker)}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Ticker fetch failed: ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled && data.data?.stock_data) {
+          setStockData(data.data.stock_data);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticker, setStockData]);
+
+  return { isLoading, error };
 }
 
 export function useMarketSnapshot() {
-  return { data: null, isLoading: false, error: null };
+  const setMarketSnapshot = useFinancialStore((s) => s.setMarketSnapshot);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+
+    fetch("/api/financial/market")
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled && data?.data) setMarketSnapshot(data.data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setMarketSnapshot]);
+
+  return { isLoading, error: null };
 }
 
 export function useFinancialQuery() {

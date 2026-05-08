@@ -67,14 +67,10 @@ export async function storeProviderKey(input: {
       iv: encrypted.iv,
       auth_tag: encrypted.authTag,
     }],
-    {
-      onConflict: "user_id,provider_id,label",
-    },
+    { onConflict: "user_id,provider_id,label" },
   );
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 }
 
 export async function createResearchQuery(input: {
@@ -105,10 +101,7 @@ export async function createResearchQuery(input: {
     .select("*")
     .single();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return normalizeQuery(data);
 }
 
@@ -120,10 +113,7 @@ export async function listResearchQueries(userId: string) {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return (data ?? []).map(normalizeQuery);
 }
 
@@ -136,19 +126,14 @@ export async function getResearchQuery(userId: string, queryId: string) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data ? normalizeQuery(data) : null;
 }
 
 export async function getResearchResult(userId: string, queryId: string) {
   const admin = getSupabaseAdmin() as any;
   const query = await getResearchQuery(userId, queryId);
-  if (!query) {
-    return null;
-  }
+  if (!query) return null;
 
   const [{ data: responses, error: responsesError }, { data: synthesis, error: synthesisError }] =
     await Promise.all([
@@ -156,19 +141,16 @@ export async function getResearchResult(userId: string, queryId: string) {
       admin.from("syntheses").select("*").eq("query_id", queryId).maybeSingle(),
     ]);
 
-  if (responsesError) {
-    throw responsesError;
-  }
-
-  if (synthesisError) {
-    throw synthesisError;
-  }
+  if (responsesError) throw responsesError;
+  if (synthesisError) throw synthesisError;
 
   return {
     query,
     responses: (responses ?? []).map(normalizeResponse),
     synthesis: synthesis ? normalizeSynthesis(synthesis) : null,
-    financial_synthesis: synthesis?.financial_synthesis ? normalizeFinancialSynthesis(synthesis.financial_synthesis) : null,
+    financial_synthesis: synthesis?.financial_synthesis
+      ? normalizeFinancialSynthesis(synthesis.financial_synthesis)
+      : null,
   };
 }
 
@@ -183,44 +165,41 @@ export async function transitionQueryToRunning(userId: string, queryId: string) 
     .select("*")
     .maybeSingle();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data ? normalizeQuery(data) : null;
 }
 
 async function resolveProviderKey(userId: string, providerId: string) {
   const data = await getOptionalProviderKey(userId, providerId);
-
-  if (!data) {
-    return null;
-  }
-
-  return decryptSecret({
-    ciphertext: data.ciphertext,
-    iv: data.iv,
-    authTag: data.auth_tag,
-  });
+  if (!data) return null;
+  return decryptSecret({ ciphertext: data.ciphertext, iv: data.iv, authTag: data.auth_tag });
 }
 
 function buildOpenWebModelResponse(query: ResearchQueryRecord): string {
-  const openWebContext = query.options.open_web_context;
+  const ctx = query.options.open_web_context;
+  const ticker = query.options.ticker ?? "";
   const sectionEntries: Array<[string, string[]]> = [
-    ["Company overview", openWebContext?.company_overview ?? []],
-    ["SEC risk factors", openWebContext?.sec_risks ?? []],
-    ["Earnings context", openWebContext?.earnings_summary ?? []],
-    ["News aggregation", openWebContext?.news ?? []],
-    ["Reddit sentiment", openWebContext?.reddit ?? []],
-    ["Macro overlay", openWebContext?.macro ?? []],
+    ["Company overview", ctx?.company_overview ?? []],
+    ["Market data", ctx?.market_data ?? []],
+    ["Analyst consensus", ctx?.analyst_data ?? []],
+    ["SEC risk factors", ctx?.sec_risks ?? []],
+    ["Earnings context", ctx?.earnings_summary ?? []],
+    ["Recent news", ctx?.news ?? []],
+    ["Reddit sentiment", ctx?.reddit ?? []],
+    ["Macro overlay", ctx?.macro ?? []],
   ];
 
   const sections = sectionEntries
     .filter(([, lines]) => lines.length > 0)
-    .map(([title, lines]) => `${title}:\n${lines.map((line) => `- ${line}`).join("\n")}`);
+    .map(([title, lines]) => `${title}:\n${lines.map((l) => `• ${l}`).join("\n")}`);
 
   if (sections.length === 0) {
-    return "Open-web intelligence mode completed, but source aggregation returned limited structured context.";
+    return `Open-web intelligence completed for ${ticker || "this query"}, but source aggregation returned limited structured context.`;
+  }
+
+  const sig = ctx?.news_signals;
+  if (sig) {
+    sections.push(`News signal summary: ${sig.bullish} bullish, ${sig.bearish} bearish, ${sig.neutral} neutral articles.`);
   }
 
   return sections.join("\n\n");
@@ -242,10 +221,7 @@ export async function executeResearchQuery(input: {
   const admin = getSupabaseAdmin() as any;
   const responses: ModelResponseOut[] = [];
 
-  await input.onEvent({
-    type: "query_started",
-    query_id: input.query.id,
-  });
+  await input.onEvent({ type: "query_started", query_id: input.query.id });
 
   const settled = await Promise.all(
     input.query.selected_models.map(async (selection) => {
@@ -264,10 +240,7 @@ export async function executeResearchQuery(input: {
         if (isFreeModel(selection)) {
           result = {
             text: buildOpenWebModelResponse(input.query),
-            usage: {
-              input_tokens: 0,
-              output_tokens: 0,
-            },
+            usage: { input_tokens: 0, output_tokens: 0 },
           };
         } else {
           const apiKey = await resolveProviderKey(input.userId, selection.provider_id);
@@ -301,12 +274,7 @@ export async function executeResearchQuery(input: {
 
         responses.push(responseRecord);
         await persistResponse(responseRecord);
-
-        await input.onEvent({
-          type: "model_completed",
-          query_id: input.query.id,
-          response: responseRecord,
-        });
+        await input.onEvent({ type: "model_completed", query_id: input.query.id, response: responseRecord });
       } catch (error) {
         const responseRecord = normalizeResponse({
           id: randomUUID(),
@@ -325,16 +293,12 @@ export async function executeResearchQuery(input: {
         });
 
         await persistResponse(responseRecord);
-
         await input.onEvent({
           type: "model_failed",
           query_id: input.query.id,
           provider_id: selection.provider_id,
           model_id: selection.model_id,
-          error: {
-            code: "provider_error",
-            message: responseRecord.error ?? "Provider request failed",
-          },
+          error: { code: "provider_error", message: responseRecord.error ?? "Provider request failed" },
         });
       }
     }),
@@ -342,7 +306,7 @@ export async function executeResearchQuery(input: {
 
   void settled;
 
-  const successful = responses.filter((response) => response.status === "ok" && response.text);
+  const successful = responses.filter((r) => r.status === "ok" && r.text);
 
   if (successful.length === 0) {
     const fallbackResponse = normalizeResponse({
@@ -363,16 +327,8 @@ export async function executeResearchQuery(input: {
 
     responses.push(fallbackResponse);
     await persistResponse(fallbackResponse);
-    await input.onEvent({
-      type: "model_completed",
-      query_id: input.query.id,
-      response: fallbackResponse,
-    });
-
-    await input.onEvent({
-      type: "synthesis_started",
-      query_id: input.query.id,
-    });
+    await input.onEvent({ type: "model_completed", query_id: input.query.id, response: fallbackResponse });
+    await input.onEvent({ type: "synthesis_started", query_id: input.query.id });
 
     const synthesized = await buildFinancialSynthesis({
       userId: input.userId,
@@ -384,11 +340,7 @@ export async function executeResearchQuery(input: {
 
     await admin
       .from("research_queries")
-      .update({
-        status: "complete",
-        error: null,
-        completed_at: new Date().toISOString(),
-      })
+      .update({ status: "complete", error: null, completed_at: new Date().toISOString() })
       .eq("id", input.query.id);
 
     await input.onEvent({
@@ -397,17 +349,11 @@ export async function executeResearchQuery(input: {
       synthesis: synthesisRecord.synthesis,
       financial_synthesis: synthesisRecord.financial_synthesis,
     });
-    await input.onEvent({
-      type: "done",
-      query_id: input.query.id,
-    });
+    await input.onEvent({ type: "done", query_id: input.query.id });
     return;
   }
 
-  await input.onEvent({
-    type: "synthesis_started",
-    query_id: input.query.id,
-  });
+  await input.onEvent({ type: "synthesis_started", query_id: input.query.id });
 
   const synthesized = await buildFinancialSynthesis({
     userId: input.userId,
@@ -419,11 +365,7 @@ export async function executeResearchQuery(input: {
 
   await admin
     .from("research_queries")
-    .update({
-      status: "complete",
-      completed_at: new Date().toISOString(),
-      error: null,
-    })
+    .update({ status: "complete", completed_at: new Date().toISOString(), error: null })
     .eq("id", input.query.id);
 
   await input.onEvent({
@@ -432,11 +374,7 @@ export async function executeResearchQuery(input: {
     synthesis: synthesisRecord.synthesis,
     financial_synthesis: synthesisRecord.financial_synthesis,
   });
-
-  await input.onEvent({
-    type: "done",
-    query_id: input.query.id,
-  });
+  await input.onEvent({ type: "done", query_id: input.query.id });
 }
 
 async function persistResponse(response: ModelResponseOut) {
@@ -454,10 +392,7 @@ async function persistResponse(response: ModelResponseOut) {
     error: response.error ?? null,
     error_code: response.error ? "PROVIDER_ERROR" : null,
   });
-
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 }
 
 async function persistSynthesis(queryId: string, payload: {
@@ -476,11 +411,7 @@ async function persistSynthesis(queryId: string, payload: {
       financial_synthesis: payload.financial_synthesis,
     },
   ]);
-
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return payload;
 }
 
@@ -494,9 +425,7 @@ async function buildFinancialSynthesis(input: {
   const openWebContext = input.query.options.open_web_context ?? null;
 
   try {
-    if (firstModel.provider_id === "orvex") {
-      throw new Error("Skip premium synthesis");
-    }
+    if (firstModel.provider_id === "orvex") throw new Error("Skip premium synthesis");
 
     const apiKey = await resolveProviderKey(input.userId, firstModel.provider_id);
     const prompt = [
@@ -508,14 +437,15 @@ async function buildFinancialSynthesis(input: {
       `Original prompt:\n${input.query.prompt}`,
       "Model responses:",
       ...input.responses.map(
-        (response) =>
-          `Provider ${response.provider_id} / ${response.model_id}:\n${response.text ?? ""}`,
+        (r) => `Provider ${r.provider_id} / ${r.model_id}:\n${r.text ?? ""}`,
       ),
-      openWebContext ? `Open-web citations:\n${openWebContext.citations
-        .slice(0, 12)
-        .map((citation) => `- ${citation.source}: ${citation.title} (${citation.url})`)
-        .join("\n")}` : null,
-    ].join("\n\n");
+      openWebContext
+        ? `Open-web citations:\n${openWebContext.citations
+            .slice(0, 12)
+            .map((c) => `- ${c.source}: ${c.title} (${c.url})`)
+            .join("\n")}`
+        : null,
+    ].filter(Boolean).join("\n\n");
 
     const synthesisResponse = await runModelCompletion({
       providerId: firstModel.provider_id,
@@ -573,101 +503,291 @@ function buildResearchPrompt(query: FinancialQuery, openWebContext: OpenWebConte
   return parts.join("\n");
 }
 
-function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: ModelResponseOut[]): FinancialSynthesis {
-  const openWebContext = query.options.open_web_context ?? null;
-  const excerpts = responses
-    .map((response) => (response.text ?? "").split(/\n+/).find(Boolean)?.trim())
-    .filter(Boolean)
-    .slice(0, 3) as string[];
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function bullishNewsSignals(news: string[]): string[] {
+  return news
+    .filter((line) => line.includes("[BULLISH]"))
+    .slice(0, 4)
+    .map((line) => line.replace(/.*\[BULLISH\]:\s?/, "").split(" — ")[0].trim());
+}
+
+function bearishNewsSignals(news: string[]): string[] {
+  return news
+    .filter((line) => line.includes("[BEARISH]"))
+    .slice(0, 4)
+    .map((line) => line.replace(/.*\[BEARISH\]:\s?/, "").split(" — ")[0].trim());
+}
+
+function calcInvestmentScore(ctx: OpenWebContext | null): number {
+  if (!ctx) return 0;
+  let score = 0;
+
+  // News signals (±0.08 each, max ±0.4)
+  const newsNet = Math.min(ctx.news_signals.bullish, 5) - Math.min(ctx.news_signals.bearish, 5);
+  score += newsNet * 0.08;
+
+  // Reddit sentiment
+  if (ctx.reddit.length > 0) {
+    const summary = ctx.reddit[0].toLowerCase();
+    if (summary.includes("bullish")) score += 0.15;
+    else if (summary.includes("bearish")) score -= 0.15;
+  }
+
+  // Analyst recommendation
+  const analystLine = ctx.analyst_data.find((l) => l.toLowerCase().includes("rating:"));
+  if (analystLine) {
+    const rating = analystLine.toLowerCase();
+    if (rating.includes("strong_buy") || rating.includes("buy")) score += 0.2;
+    else if (rating.includes("strong_sell") || rating.includes("sell")) score -= 0.2;
+    else if (rating.includes("hold") || rating.includes("neutral")) score += 0.05;
+  }
+
+  // SEC risks reduce score slightly
+  if (ctx.sec_risks.length > 3) score -= 0.05;
+
+  return Math.max(-1, Math.min(1, score));
+}
+
+function buildFallbackFinancialSynthesis(
+  query: ResearchQueryRecord,
+  responses: ModelResponseOut[],
+): FinancialSynthesis {
+  const ctx = query.options.open_web_context ?? null;
+  const ticker = query.options.ticker ?? "";
+  const investmentScore = calcInvestmentScore(ctx);
+
+  // ── Summary (multi-section) ─────────────────────────────────────────────────
+  const summaryParts: string[] = [];
+
+  if (ctx?.company_overview[0]) {
+    summaryParts.push(ctx.company_overview[0]);
+  }
+
+  if (ctx?.market_data.length) {
+    summaryParts.push(`Market activity: ${ctx.market_data.slice(0, 3).join(" | ")}.`);
+  }
+
+  if (ctx?.analyst_data.length) {
+    summaryParts.push(`Analyst view: ${ctx.analyst_data[0]}`);
+  }
+
+  const sig = ctx?.news_signals;
+  if (sig) {
+    const totalNews = sig.bullish + sig.bearish + sig.neutral;
+    const sentiment =
+      sig.bullish > sig.bearish ? "leaning bullish" : sig.bearish > sig.bullish ? "leaning bearish" : "mixed";
+    summaryParts.push(
+      `News signal across ${totalNews} articles is ${sentiment} (${sig.bullish} bullish, ${sig.bearish} bearish).`,
+    );
+  }
+
+  if (ctx?.macro.length) {
+    summaryParts.push(`Macro context: ${ctx.macro.slice(0, 2).join(" ")}`);
+  }
+
+  const summary =
+    summaryParts.length > 0
+      ? summaryParts.join(" ")
+      : ctx?.company_overview[0] ?? `Intelligence report for ${ticker || "this query"} compiled from open-web sources.`;
+
+  // ── Investment thesis ───────────────────────────────────────────────────────
+  const thesisLines: string[] = [];
+  if (ctx?.company_overview[0]) thesisLines.push(ctx.company_overview[0]);
+  if (ctx?.analyst_data[0]) thesisLines.push(ctx.analyst_data[0]);
+  if (ctx?.market_data[0]) thesisLines.push(`Current: ${ctx.market_data[0]}`);
+  const investmentThesis =
+    thesisLines.join(" ") || `Analysis of ${ticker || "this asset"} based on aggregated open-web intelligence.`;
+
+  // ── Bull theses ─────────────────────────────────────────────────────────────
+  const bullNews = bullishNewsSignals(ctx?.news ?? []);
+  const bullPoints: string[] = [
+    ...(ctx?.analyst_data.filter((l) => l.toLowerCase().includes("buy") || l.toLowerCase().includes("upside")).slice(0, 2) ?? []),
+    ...bullNews,
+    ...(ctx?.analyst_data.filter((l) => l.includes("growth") || l.includes("revenue")).slice(0, 2) ?? []),
+  ].filter(Boolean).slice(0, 6);
+
+  // Add macro tailwinds
+  const fedLine = ctx?.macro.find((l) => l.toLowerCase().includes("fed funds"));
+  if (fedLine && fedLine.match(/[0-9]+\.[0-9]+/) ) {
+    const rate = parseFloat(fedLine.match(/(\d+\.\d+)/)?.[1] ?? "0");
+    if (rate < 3.5) bullPoints.push("Low Fed Funds Rate provides accommodative monetary environment for equity valuations.");
+  }
+
+  if (bullPoints.length < 3 && ctx?.company_overview[1]) {
+    bullPoints.push(`Strong business foundation: ${ctx.company_overview[1].slice(0, 120)}`);
+  }
+
+  const bullishTheses = bullPoints.length > 0
+    ? [{
+        id: "bull-1",
+        title: `${ticker || "Asset"} Upside Case`,
+        confidence: 0.55 + Math.max(0, investmentScore) * 0.3,
+        supporting_points: bullPoints.slice(0, 6),
+        growth_catalysts: bullNews.slice(0, 3),
+        valuation_opportunities: ctx?.analyst_data.filter((l) => l.includes("target")).slice(0, 2) ?? [],
+        provider_id: "orvex",
+        model_id: "open-web-intelligence",
+      }]
+    : responses.slice(0, 1).map((r, i) => ({
+        id: `bull-${i + 1}`,
+        title: `Open-web upside case`,
+        confidence: 0.55,
+        supporting_points: [(r.text ?? "").slice(0, 200)],
+        growth_catalysts: [],
+        valuation_opportunities: [],
+        provider_id: r.provider_id,
+        model_id: r.model_id,
+      }));
+
+  // ── Bear theses ─────────────────────────────────────────────────────────────
+  const bearNews = bearishNewsSignals(ctx?.news ?? []);
+  const bearPoints: string[] = [
+    ...(ctx?.sec_risks.slice(0, 3) ?? []),
+    ...bearNews,
+  ].filter(Boolean).slice(0, 6);
+
+  // Add macro headwinds
+  const tenYearLine = ctx?.macro.find((l) => l.includes("10Y Treasury"));
+  if (tenYearLine) {
+    const rate = parseFloat(tenYearLine.match(/(\d+\.\d+)/)?.[1] ?? "0");
+    if (rate > 4.0) {
+      bearPoints.push(`Elevated 10Y Treasury yield (${rate.toFixed(2)}%) compresses equity risk premium and increases discount rate pressure.`);
+    }
+  }
+
+  const spreadLine = ctx?.macro.find((l) => l.includes("10Y-2Y spread"));
+  if (spreadLine && spreadLine.includes("-")) {
+    bearPoints.push("Inverted yield curve (negative 10Y-2Y spread) historically signals elevated recession risk.");
+  }
+
+  if (bearPoints.length < 3 && ctx?.analyst_data.find((l) => l.toLowerCase().includes("sell") || l.toLowerCase().includes("risk"))) {
+    const sellLine = ctx.analyst_data.find((l) => l.toLowerCase().includes("sell") || l.toLowerCase().includes("risk"));
+    if (sellLine) bearPoints.push(sellLine);
+  }
+
+  const bearishTheses = bearPoints.length > 0
+    ? [{
+        id: "bear-1",
+        title: `${ticker || "Asset"} Risk Case`,
+        confidence: 0.5 + Math.max(0, -investmentScore) * 0.3,
+        supporting_points: bearPoints.slice(0, 6),
+        risks: ctx?.sec_risks.slice(0, 3) ?? [],
+        valuation_concerns: ctx?.market_data.filter((l) => l.includes("P/E")).slice(0, 2) ?? [],
+        macro_threats: ctx?.macro.slice(0, 2) ?? [],
+        provider_id: "orvex",
+        model_id: "open-web-intelligence",
+      }]
+    : responses.slice(0, 1).map((r, i) => ({
+        id: `bear-${i + 1}`,
+        title: `Open-web risk case`,
+        confidence: 0.45,
+        supporting_points: [(r.text ?? "").slice(0, 200)],
+        risks: [],
+        valuation_concerns: [],
+        macro_threats: [],
+        provider_id: r.provider_id,
+        model_id: r.model_id,
+      }));
+
+  // ── Consensus & insights ────────────────────────────────────────────────────
+  const consensusClaims = [
+    ctx?.company_overview[0],
+    ctx?.market_data[0],
+    ctx?.analyst_data[0],
+  ].filter((c): c is string => Boolean(c)).slice(0, 3).map((claim, i) => ({
+    id: `consensus-${i + 1}`,
+    claim,
+    supporting_models: ["orvex:open-web-intelligence"],
+    confidence: 0.7,
+  }));
+
+  const uniqueInsights = [
+    ...(ctx?.news.slice(0, 3).map((n, i) => ({
+      id: `insight-news-${i + 1}`,
+      insight: n.replace(/\[BULLISH\]|\[BEARISH\]/, "").trim(),
+      provider_id: "orvex",
+      model_id: "open-web-intelligence",
+    })) ?? []),
+    ...(ctx?.reddit.slice(0, 2).map((r, i) => ({
+      id: `insight-reddit-${i + 1}`,
+      insight: r,
+      provider_id: "orvex",
+      model_id: "open-web-intelligence",
+    })) ?? []),
+  ];
+
+  const citations = (ctx?.citations ?? []).slice(0, 12).map((c, i) => ({
+    id: `citation-${i + 1}`,
+    title: c.title,
+    url: c.url,
+    snippet: `${c.source}${c.published_at ? ` • ${formatRelativeTime(c.published_at)}` : ""}`,
+    claim_ids: [],
+  }));
+
+  const keyRisks = [
+    ...(ctx?.sec_risks.slice(0, 3) ?? []),
+    ...bearNews.slice(0, 2),
+  ].filter(Boolean).slice(0, 5);
+
+  // ── Confidence scores ───────────────────────────────────────────────────────
+  const sig2 = ctx?.news_signals ?? { bullish: 0, bearish: 0, neutral: 0 };
+  const total = sig2.bullish + sig2.bearish + sig2.neutral || 1;
+  const bullConf = Math.min(0.9, 0.4 + (sig2.bullish / total) * 0.5);
+  const bearConf = Math.min(0.9, 0.4 + (sig2.bearish / total) * 0.5);
 
   return {
-    ticker: query.options.ticker ?? undefined,
-    summary:
-      excerpts.join(" ") ||
-      openWebContext?.company_overview[0] ||
-      "Research completed successfully.",
-    consensus: excerpts.slice(0, 3).map((claim, index) => ({
-      id: `consensus-${index + 1}`,
-      claim,
-      supporting_models: responses.slice(0, 2).map((response) => `${response.provider_id}:${response.model_id}`),
-      confidence: 0.6,
-    })),
+    ticker: ticker || undefined,
+    summary,
+    consensus: consensusClaims,
     disagreements: [],
-    unique_insights: responses.slice(0, 4).map((response, index) => ({
-      id: `insight-${index + 1}`,
-      insight: (response.text ?? "").slice(0, 220),
-      provider_id: response.provider_id,
-      model_id: response.model_id,
-    })),
-    citations: (openWebContext?.citations ?? []).slice(0, 8).map((citation, index) => ({
-      id: `citation-${index + 1}`,
-      title: citation.title,
-      url: citation.url,
-      snippet: citation.source,
-      claim_ids: [],
-    })),
+    unique_insights: uniqueInsights,
+    citations,
     confidence_score: {
-      consensus_agreement: 0.6,
-      bullish_confidence: 0.55,
-      bearish_confidence: 0.45,
+      consensus_agreement: 0.65,
+      bullish_confidence: bullConf,
+      bearish_confidence: bearConf,
     },
-    investment_thesis:
-      excerpts[0] ??
-      openWebContext?.company_overview[0] ??
-      "Further evidence needed before conviction increases.",
-    key_risks:
-      openWebContext?.sec_risks.length
-        ? openWebContext.sec_risks.slice(0, 4)
-        : excerpts[1]
-          ? [excerpts[1]]
-          : [],
-    bullish_theses: responses.slice(0, 2).map((response, index) => ({
-      id: `bull-${index + 1}`,
-      title: `${response.provider_id === "orvex" ? "Open-web" : response.provider_id} upside case`,
-      confidence: 0.6,
-      supporting_points: [(response.text ?? "").slice(0, 180)],
-      growth_catalysts: [],
-      valuation_opportunities: [],
-      provider_id: response.provider_id,
-      model_id: response.model_id,
-    })),
-    bearish_theses: responses.slice(0, 2).map((response, index) => ({
-      id: `bear-${index + 1}`,
-      title: `${response.provider_id === "orvex" ? "Open-web" : response.provider_id} risk case`,
-      confidence: 0.45,
-      supporting_points: [(response.text ?? "").slice(0, 180)],
-      risks: [],
-      valuation_concerns: [],
-      macro_threats: [],
-      provider_id: response.provider_id,
-      model_id: response.model_id,
-    })),
-    consensus_points: excerpts.slice(0, 3).map((point, index) => ({
-      id: `point-${index + 1}`,
-      point,
-      supporting_providers: responses.map((response) => response.provider_id),
-      confidence: 0.6,
+    investment_thesis: investmentThesis,
+    key_risks: keyRisks,
+    bullish_theses: bullishTheses,
+    bearish_theses: bearishTheses,
+    consensus_points: consensusClaims.map((c) => ({
+      id: c.id,
+      point: c.claim,
+      supporting_providers: ["orvex"],
+      confidence: 0.7,
       evidence_strength: "medium",
     })),
     contradictions: [],
-    investment_score: 0.2,
-    key_questions:
-      openWebContext?.news.slice(0, 2).map((item) => `Validate: ${item}`) ?? [],
+    investment_score: investmentScore,
+    key_questions: ctx?.news.slice(0, 2).map((n) => `Validate: ${n.split(":").pop()?.trim().slice(0, 80)}`) ?? [],
     next_research_areas: [
-      ...(openWebContext?.macro.length ? ["Track macro series changes from FRED overlays."] : []),
-      ...(openWebContext?.reddit.length ? ["Watch sentiment shifts across investing communities."] : []),
+      ...(ctx?.macro.length ? ["Monitor FRED macro series for rate and inflation shifts."] : []),
+      ...(ctx?.reddit.length ? ["Track sentiment changes in r/stocks, r/wallstreetbets."] : []),
+      ...(ctx?.sec_risks.length ? ["Review latest SEC 10-K/10-Q for updated risk disclosures."] : []),
     ],
   };
+}
+
+function formatRelativeTime(dateStr: string): string {
+  try {
+    const ms = Date.now() - Date.parse(dateStr);
+    const hours = Math.floor(ms / 3_600_000);
+    if (hours < 1) return "< 1h ago";
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return dateStr;
+  }
 }
 
 function mergeFinancialSynthesis(base: FinancialSynthesis, patch: Partial<FinancialSynthesis>): FinancialSynthesis {
   return {
     ...base,
     ...patch,
-    confidence_score: {
-      ...base.confidence_score,
-      ...patch.confidence_score,
-    },
+    confidence_score: { ...base.confidence_score, ...patch.confidence_score },
     consensus: Array.isArray(patch.consensus) ? patch.consensus : base.consensus,
     disagreements: Array.isArray(patch.disagreements) ? patch.disagreements : base.disagreements,
     unique_insights: Array.isArray(patch.unique_insights) ? patch.unique_insights : base.unique_insights,
@@ -678,17 +798,13 @@ function mergeFinancialSynthesis(base: FinancialSynthesis, patch: Partial<Financ
     consensus_points: Array.isArray(patch.consensus_points) ? patch.consensus_points : base.consensus_points,
     contradictions: Array.isArray(patch.contradictions) ? patch.contradictions : base.contradictions,
     key_questions: Array.isArray(patch.key_questions) ? patch.key_questions : base.key_questions,
-    next_research_areas: Array.isArray(patch.next_research_areas)
-      ? patch.next_research_areas
-      : base.next_research_areas,
+    next_research_areas: Array.isArray(patch.next_research_areas) ? patch.next_research_areas : base.next_research_areas,
   };
 }
 
 function parseJsonObject<T>(text: string): T {
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    throw new Error("No JSON object found");
-  }
+  if (!match) throw new Error("No JSON object found");
   return JSON.parse(match[0]) as T;
 }
 
@@ -743,3 +859,4 @@ function normalizeSynthesis(row: Record<string, unknown>): SynthesisOut {
 function normalizeFinancialSynthesis(value: unknown): FinancialSynthesis {
   return value as FinancialSynthesis;
 }
+

@@ -2,8 +2,8 @@ import type { MarketSnapshot } from "@/types/financial";
 import {
   getYahooCompanyProfile,
   getYahooEarnings,
+  getYahooExtendedQuote,
   getYahooMarketSnapshot,
-  getYahooQuote,
   searchYahooTickers,
 } from "@/lib/server/providers/yahoo";
 
@@ -19,6 +19,12 @@ export interface QuoteData {
   high_price?: number | null;
   low_price?: number | null;
   volume?: number | null;
+  market_cap?: number | null;
+  pe_ratio?: number | null;
+  fifty_two_week_high?: number | null;
+  fifty_two_week_low?: number | null;
+  after_hours_price?: number | null;
+  after_hours_change_percent?: number | null;
 }
 
 export interface CompanyProfile {
@@ -141,25 +147,19 @@ async function finnhubMarketSnapshot(): Promise<MarketSnapshot> {
 
 export async function searchTickers(query: string, limit: number) {
   const provider = getConfiguredMarketProvider();
-
-  if (provider === "finnhub") {
-    return finnhubSearch(query, limit);
-  }
-
+  if (provider === "finnhub") return finnhubSearch(query, limit);
   return searchYahooTickers(query, limit);
 }
 
-export async function getQuote(symbol: string) {
+export async function getQuote(symbol: string): Promise<QuoteData | null> {
   const provider = getConfiguredMarketProvider();
 
   if (provider === "finnhub") {
     const quote = await finnhubQuote(symbol);
-    if (quote) {
-      return quote;
-    }
+    if (quote) return quote;
   }
 
-  return getYahooQuote(symbol);
+  return getYahooExtendedQuote(symbol);
 }
 
 export async function getCompanyProfile(symbol: string) {
@@ -167,9 +167,7 @@ export async function getCompanyProfile(symbol: string) {
 
   if (provider === "finnhub") {
     const company = await finnhubCompany(symbol);
-    if (company) {
-      return company;
-    }
+    if (company) return company;
   }
 
   return getYahooCompanyProfile(symbol);
@@ -180,9 +178,7 @@ export async function getEarnings(symbol: string, limit: number) {
 
   if (provider === "finnhub") {
     const earnings = await finnhubEarnings(symbol, limit);
-    if (earnings.length > 0) {
-      return earnings;
-    }
+    if (earnings.length > 0) return earnings;
   }
 
   return getYahooEarnings(symbol, limit);
@@ -190,10 +186,6 @@ export async function getEarnings(symbol: string, limit: number) {
 
 export async function getMarketSnapshot() {
   const provider = getConfiguredMarketProvider();
-
-  if (provider === "finnhub") {
-    return finnhubMarketSnapshot();
-  }
-
+  if (provider === "finnhub") return finnhubMarketSnapshot();
   return getYahooMarketSnapshot();
 }

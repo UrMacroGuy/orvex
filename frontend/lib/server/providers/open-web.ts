@@ -2,17 +2,41 @@ import { getMacroOverlay } from "@/lib/server/providers/fred";
 import { getNewsArticles } from "@/lib/server/providers/news";
 import { getRedditSentiment } from "@/lib/server/providers/reddit";
 import { getSecCompanyOverview, getSecRiskSummary } from "@/lib/server/providers/sec";
-import { getYahooAnalystSummary, getYahooCompanyProfile, getYahooEarnings, getYahooQuote } from "@/lib/server/providers/yahoo";
+import { getYahooAnalystSummary, getYahooCompanyProfile, getYahooEarnings, getYahooExtendedQuote } from "@/lib/server/providers/yahoo";
 import type { FinancialQuery } from "@/types/financial";
 
 export interface OpenWebContext {
   company_overview: string[];
+  market_data: string[];
+  analyst_data: string[];
   sec_risks: string[];
   earnings_summary: string[];
   news: string[];
+  news_signals: { bullish: number; bearish: number; neutral: number };
   reddit: string[];
   macro: string[];
-  citations: Array<{ title: string; url: string; source: string }>;
+  citations: Array<{ title: string; url: string; source: string; published_at?: string }>;
+}
+
+function formatMarketCap(val: number | null | undefined): string | null {
+  if (!val) return null;
+  if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
+  if (val >= 1e9) return `$${(val / 1e9).toFixed(1)}B`;
+  if (val >= 1e6) return `$${(val / 1e6).toFixed(0)}M`;
+  return `$${val.toLocaleString()}`;
+}
+
+function formatVolume(val: number | null | undefined): string | null {
+  if (!val) return null;
+  if (val >= 1e6) return `${(val / 1e6).toFixed(1)}M`;
+  if (val >= 1e3) return `${(val / 1e3).toFixed(0)}K`;
+  return String(val);
+}
+
+function formatPct(val: number | null | undefined): string | null {
+  if (val === null || val === undefined) return null;
+  const sign = val >= 0 ? "+" : "";
+  return `${sign}${(val * 100).toFixed(1)}%`;
 }
 
 function addCitation(
@@ -20,12 +44,10 @@ function addCitation(
   source: string,
   title: string,
   url: string | null | undefined,
+  published_at?: string | null,
 ) {
-  if (!url) {
-    return;
-  }
-
-  citations.push({ source, title, url });
+  if (!url) return;
+  citations.push({ source, title, url, published_at: published_at ?? undefined });
 }
 
 export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenWebContext> {
@@ -36,34 +58,105 @@ export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenW
   const [company, quote, analyst, earnings, secOverview, secRisks, news, reddit, macro] =
     await Promise.all([
       ticker ? getYahooCompanyProfile(ticker).catch(() => null) : Promise.resolve(null),
-      ticker ? getYahooQuote(ticker).catch(() => null) : Promise.resolve(null),
+      ticker ? getYahooExtendedQuote(ticker).catch(() => null) : Promise.resolve(null),
       ticker ? getYahooAnalystSummary(ticker).catch(() => null) : Promise.resolve(null),
       ticker ? getYahooEarnings(ticker, 4).catch(() => []) : Promise.resolve([]),
       ticker ? getSecCompanyOverview(ticker).catch(() => null) : Promise.resolve(null),
-      ticker ? getSecRiskSummary(ticker).catch(() => ({ filing: null, extracted_text: null, risk_factors: [] })) : Promise.resolve({ filing: null, extracted_text: null, risk_factors: [] }),
-      getNewsArticles({ ticker, companyName, limit: 6 }).catch(() => []),
+      ticker
+        ? getSecRiskSummary(ticker).catch(() => ({ filing: null, extracted_text: null, risk_factors: [] }))
+        : Promise.resolve({ filing: null, extracted_text: null, risk_factors: [] }),
+      getNewsArticles({ ticker, companyName, limit: 20 }).catch(() => []),
       ticker || companyName
         ? getRedditSentiment([ticker, companyName].filter(Boolean).join(" ")).catch(() => null)
         : Promise.resolve(null),
       getMacroOverlay().catch(() => ({ summary: [], series: [] })),
     ]);
 
+  // ── Company overview ────────────────────────────────────────────────────────
   const companyOverview = [
     company
       ? `${company.company_name} (${company.symbol}) operates in ${company.sector ?? "unknown sector"} / ${company.industry ?? "unknown industry"}.`
       : null,
-    company?.description ?? null,
-    quote
-      ? `Latest price ${quote.current_price.toFixed(2)} with ${quote.change_percent.toFixed(2)}% move vs previous close.`
-      : null,
-    analyst?.target_price
-      ? `Yahoo analyst target mean price: ${analyst.target_price}. Recommendation: ${analyst.recommendation ?? "n/a"}.`
-      : null,
+    company?.description?.slice(0, 400) ?? null,
     secOverview?.sic_description
       ? `SEC industry classification: ${secOverview.sic_description}.`
       : null,
   ].filter((item): item is string => Boolean(item));
 
+  // ── Market data ─────────────────────────────────────────────────────────────
+  const marketData: string[] = [];
+
+  if (quote) {
+    const direction = quote.change_percent >= 0 ? "+" : "";
+    marketData.push(
+      `Current price: $${quote.current_price.toFixed(2)} (${direction}${quote.change_percent.toFixed(2)}% today)`,
+    );
+
+    if (quote.high_price && quote.low_price) {
+      marketData.push(`Day range: $${quote.low_price.toFixed(2)} – $${quote.high_price.toFixed(2)}`);
+    }
+
+    if (quote.fifty_two_week_low && quote.fifty_two_week_high) {
+      const pctFromHigh = ((quote.current_price - quote.fifty_two_week_high) / quote.fifty_two_week_high) * 100;
+      marketData.push(
+        `52-week range: $${quote.fifty_two_week_low.toFixed(2)} – $${quote.fifty_two_week_high.toFixed(2)} (${pctFromHigh.toFixed(1)}% from 52w high)`,
+      );
+    }
+
+    const mcap = formatMarketCap(quote.market_cap);
+    if (mcap) marketData.push(`Market cap: ${mcap}`);
+
+    if (quote.pe_ratio) marketData.push(`Trailing P/E: ${quote.pe_ratio.toFixed(1)}x`);
+
+    const vol = formatVolume(quote.volume);
+    if (vol) marketData.push(`Volume: ${vol}`);
+
+    if (quote.after_hours_price && quote.after_hours_change_percent) {
+      const dir = quote.after_hours_change_percent >= 0 ? "+" : "";
+      marketData.push(
+        `After-hours: $${quote.after_hours_price.toFixed(2)} (${dir}${quote.after_hours_change_percent.toFixed(2)}%)`,
+      );
+    }
+  }
+
+  // ── Analyst data ────────────────────────────────────────────────────────────
+  const analystData: string[] = [];
+
+  if (analyst) {
+    if (analyst.target_price) {
+      const upside = quote
+        ? (((analyst.target_price - quote.current_price) / quote.current_price) * 100).toFixed(1)
+        : null;
+      analystData.push(
+        `Analyst consensus target: $${analyst.target_price.toFixed(2)}${upside ? ` (${upside}% upside from current)` : ""}. Rating: ${analyst.recommendation ?? "n/a"}.`,
+      );
+    }
+
+    if (analyst.target_high && analyst.target_low) {
+      analystData.push(
+        `Price target range: $${analyst.target_low.toFixed(2)} – $${analyst.target_high.toFixed(2)}.`,
+      );
+    }
+
+    const growth = formatPct(analyst.revenue_growth);
+    const epsGrowth = formatPct(analyst.earnings_growth);
+    if (growth) analystData.push(`Revenue growth (YoY): ${growth}.`);
+    if (epsGrowth) analystData.push(`Earnings growth (YoY): ${epsGrowth}.`);
+
+    if (analyst.gross_margins) {
+      analystData.push(`Gross margins: ${(analyst.gross_margins * 100).toFixed(1)}%.`);
+    }
+
+    if (analyst.return_on_equity) {
+      analystData.push(`Return on equity: ${(analyst.return_on_equity * 100).toFixed(1)}%.`);
+    }
+
+    if (analyst.beta) {
+      analystData.push(`Beta: ${analyst.beta.toFixed(2)} (market sensitivity).`);
+    }
+  }
+
+  // ── SEC risks ───────────────────────────────────────────────────────────────
   const secRiskLines = secRisks.risk_factors;
   if (secRisks.filing) {
     addCitation(
@@ -73,34 +166,6 @@ export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenW
       secRisks.filing.filing_url,
     );
   }
-
-  const earningsSummary = earnings.map((item) => {
-    const date = item.date ? new Date(item.date).toISOString().slice(0, 10) : "unknown date";
-    return `Earnings event around ${date}${item.eps_actual !== null && item.eps_actual !== undefined ? ` with trailing EPS ${item.eps_actual}` : ""}.`;
-  });
-
-  const newsLines = news.map((item) => {
-    addCitation(citations, item.source, item.title, item.url);
-    return `${item.source}: ${item.title}${item.snippet ? ` - ${item.snippet}` : ""}`;
-  });
-
-  const redditLines = reddit
-    ? [
-        reddit.summary,
-        ...reddit.top_posts.slice(0, 5).map(
-          (post) =>
-            `r/${post.subreddit} (${post.sentiment}, score ${post.score}): ${post.title}`,
-        ),
-      ]
-    : [];
-
-  if (reddit) {
-    reddit.top_posts.slice(0, 5).forEach((post) => {
-      addCitation(citations, `Reddit r/${post.subreddit}`, post.title, post.url);
-    });
-  }
-
-  const macroLines = macro.summary;
 
   if (ticker && secOverview) {
     secOverview.filings.slice(0, 5).forEach((filing) => {
@@ -113,11 +178,55 @@ export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenW
     });
   }
 
+  // ── Earnings ────────────────────────────────────────────────────────────────
+  const earningsSummary = earnings.map((item) => {
+    const date = item.date ? new Date(item.date).toISOString().slice(0, 10) : "unknown date";
+    const eps = item.eps_actual !== null && item.eps_actual !== undefined
+      ? ` — trailing EPS: $${item.eps_actual.toFixed(2)}`
+      : "";
+    const estimate = item.eps_estimate !== null && item.eps_estimate !== undefined
+      ? `, forward EPS estimate: $${item.eps_estimate.toFixed(2)}`
+      : "";
+    return `Earnings event around ${date}${eps}${estimate}.`;
+  });
+
+  // ── News ────────────────────────────────────────────────────────────────────
+  const newsSignals = { bullish: 0, bearish: 0, neutral: 0 };
+  const newsLines = news.map((item) => {
+    newsSignals[item.signal]++;
+    addCitation(citations, item.source, item.title, item.url, item.published_at);
+    const signalTag = item.signal !== "neutral" ? ` [${item.signal.toUpperCase()}]` : "";
+    return `${item.source}${signalTag}: ${item.title}${item.snippet ? ` — ${item.snippet.slice(0, 120)}` : ""}`;
+  });
+
+  // ── Reddit ──────────────────────────────────────────────────────────────────
+  const redditLines = reddit
+    ? [
+        reddit.summary,
+        ...reddit.top_posts.slice(0, 6).map(
+          (post) =>
+            `r/${post.subreddit} (${post.sentiment}, score ${post.score}): ${post.title}`,
+        ),
+      ]
+    : [];
+
+  if (reddit) {
+    reddit.top_posts.slice(0, 5).forEach((post) => {
+      addCitation(citations, `Reddit r/${post.subreddit}`, post.title, post.url);
+    });
+  }
+
+  // ── Macro ───────────────────────────────────────────────────────────────────
+  const macroLines = macro.summary;
+
   return {
     company_overview: companyOverview,
+    market_data: marketData,
+    analyst_data: analystData,
     sec_risks: secRiskLines,
     earnings_summary: earningsSummary,
     news: newsLines,
+    news_signals: newsSignals,
     reddit: redditLines,
     macro: macroLines,
     citations,
@@ -127,6 +236,8 @@ export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenW
 export function formatOpenWebContext(context: OpenWebContext) {
   const sectionEntries: Array<[string, string[]]> = [
     ["Company overview", context.company_overview],
+    ["Market data", context.market_data],
+    ["Analyst consensus", context.analyst_data],
     ["SEC risk factors", context.sec_risks],
     ["Earnings context", context.earnings_summary],
     ["News aggregation", context.news],
@@ -138,13 +249,15 @@ export function formatOpenWebContext(context: OpenWebContext) {
     .filter(([, lines]) => lines.length > 0)
     .map(([title, lines]) => `${title}:\n${lines.map((line) => `- ${line}`).join("\n")}`);
 
+  const newsSignalSummary = `News signals: ${context.news_signals.bullish} bullish, ${context.news_signals.bearish} bearish, ${context.news_signals.neutral} neutral`;
+
   const citations =
     context.citations.length > 0
       ? `Sources:\n${context.citations
-          .slice(0, 15)
-          .map((citation) => `- [${citation.source}] ${citation.title}: ${citation.url}`)
+          .slice(0, 20)
+          .map((c) => `- [${c.source}] ${c.title}: ${c.url}`)
           .join("\n")}`
       : null;
 
-  return [...sections, citations].filter(Boolean).join("\n\n");
+  return [...sections, newsSignalSummary, citations].filter(Boolean).join("\n\n");
 }
