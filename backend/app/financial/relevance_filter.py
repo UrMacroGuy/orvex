@@ -20,21 +20,29 @@ class RelevanceFilter:
 
     @staticmethod
     def _is_relevant(res: NormalizedResponse, entity: EntityProfile) -> bool:
-        """Check if content is relevant to the entity."""
+        """Score content and return true if above relevance threshold."""
         content = (res.content or "").lower()
+        score = 0
+        threshold = 30
+
+        # Positive signals
+        if entity.ticker.lower() in content: score += 40
+        if entity.company_name.lower() in content: score += 40
         
-        # Check for direct entity matches
-        if entity.ticker.lower() in content or entity.company_name.lower() in content:
-            return True
-        
-        # Check for keyword matches
         for kw in entity.keywords:
-            if kw.lower() in content:
-                return True
+            if kw.lower() in content: score += 25
         
-        # Check for macro driver matches (partial match)
         for driver in entity.macro_drivers:
-            if driver.lower() in content:
-                return True
-                
-        return False
+            if driver.lower() in content: score += 20
+        
+        # Negative signals (Noise)
+        noise_signals = [
+            ("ai", 60), ("semiconductor", 60), ("datacenter", 60), 
+            ("nvidia", 60), ("hyperscaler", 50), ("cloud infrastructure", 50)
+        ]
+        
+        for signal, penalty in noise_signals:
+            if signal in content:
+                score -= penalty
+        
+        return score >= threshold

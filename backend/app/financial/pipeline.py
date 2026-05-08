@@ -160,8 +160,9 @@ Provide a comprehensive investment analysis for {entity.company_name} ({entity.t
 
 STRICT RULES:
 1. FOCUS ONLY ON: {entity.company_name}, {entity.sector}, {entity.country}, and these macro drivers: {', '.join(entity.macro_drivers)}.
-2. REJECT: Unrelated sectors (e.g., AI/Semiconductors unless directly relevant), generic market noise, and unrelated news.
+2. REJECT: Unrelated sectors (e.g., AI, Semiconductors, Datacenters, Hyperscalers, Cloud infrastructure, NVIDIA, or any tech-sector news unless directly tied to {entity.ticker}), generic market noise, and unrelated news.
 3. BE SPECIFIC: Use facts related to {entity.keywords}.
+4. CASUALTY: Ensure all analysis is causally linked to {entity.ticker}. Do not inject generic market bullishness.
 
 Structure your response to include:
 1. Company Analysis: Business model, competitive position, key metrics
