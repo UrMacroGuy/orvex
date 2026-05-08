@@ -3,7 +3,7 @@ from .finnhub import FinnhubProvider
 from .polygon import PolygonProvider
 from .alpha_vantage import AlphaVantageProvider
 from .fmp import FMPProvider
-from .registry import FinancialProviderRegistry, build_default_registry, registry
+from app.providers.registry import ProviderRegistry as FinancialProviderRegistry, build_default_registry, registry
 from .bullish_agent import BullishThesisAgent
 from .bearish_agent import BearishThesisAgent
 from .consensus_engine import ConsensusEngine

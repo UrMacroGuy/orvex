@@ -11,7 +11,7 @@ try:
     from app.financial.polygon import PolygonProvider
     from app.financial.alpha_vantage import AlphaVantageProvider
     from app.financial.fmp import FMPProvider
-    from app.financial.registry import FinancialProviderRegistry, registry
+    from app.providers.registry import ProviderRegistry as FinancialProviderRegistry, registry
     from app.services.financial_service import FinancialService
     from app.schemas.financial import QuoteData, CompanyProfile, EarningsData
     print("[OK] All imports successful")
@@ -24,7 +24,7 @@ async def test_registry():
     """Test provider registry."""
     print("\n=== Testing Provider Registry ===")
 
-    providers = registry.list_providers()
+    providers = registry.ids()
     print(f"Available providers: {providers}")
 
     expected = ["finnhub", "polygon", "alpha_vantage", "fmp"]

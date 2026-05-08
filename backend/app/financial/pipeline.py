@@ -94,11 +94,17 @@ class FinancialOrchestrationPipeline:
         scored_responses = RelevanceFilter.score_responses(pipe_result.responses, entity, payload.query)
         filtered_responses = [s.response for s in scored_responses]
 
+        # Use entity or fallback for synthesis context
+        ticker_symbol = entity.ticker if entity else payload.ticker
+        company_name = entity.company_name if entity else payload.ticker
+        sector_info = f"Sector: {entity.sector}, Country: {entity.country}" if entity else "Market Analysis"
+
         company = CompanyProfile(
-            symbol=entity.ticker if entity else payload.ticker,
-            name=entity.company_name if entity else payload.ticker,
-            description=f"Sector: {entity.sector}, Country: {entity.country}" if entity else "",
+            symbol=ticker_symbol,
+            name=company_name,
+            description=sector_info,
         )
+
 
         context = FinancialContext(
             ticker=payload.ticker,
@@ -153,29 +159,30 @@ class FinancialOrchestrationPipeline:
 
     @staticmethod
     def _build_financial_prompt(entity: Optional[object]) -> str:
-        """Build specialized financial analysis prompt with entity grounding."""
+        """Build specialized financial analysis prompt with entity grounding and causal focus."""
         if not entity:
-            return "You are a financial analyst. Provide objective, grounded analysis."
-            
-        return f"""You are a professional financial analyst specialized in {entity.sector} in {entity.country}.
-Provide a comprehensive investment analysis for {entity.company_name} ({entity.ticker}).
+            return """You are an institutional financial analyst. Provide objective, evidence-based analysis.
+    Reason through cause-and-effect chains: Macro → Sector → Company.
+    Focus on valuation, catalyst analysis, and risk assessment."""
 
-STRICT RULES:
-1. FOCUS ONLY ON: {entity.company_name}, {entity.sector}, {entity.country}, and these macro drivers: {', '.join(entity.macro_drivers)}.
-2. REJECT: Unrelated sectors (e.g., AI, Semiconductors, Datacenters, Hyperscalers, Cloud infrastructure, NVIDIA, or any tech-sector news unless directly tied to {entity.ticker}), generic market noise, and unrelated news.
-3. BE SPECIFIC: Use facts related to {entity.keywords}.
-4. CASUALTY: Ensure all analysis is causally linked to {entity.ticker}. Do not inject generic market bullishness.
+        return f"""You are a senior institutional financial analyst specialized in {entity.sector} ({entity.country}).
+    Provide a rigorous investment analysis for {entity.company_name} ({entity.ticker}).
 
-Structure your response to include:
-1. Company Analysis: Business model, competitive position, key metrics
-2. Sector Analysis: Industry trends, competitive landscape
-3. Macro Analysis: Focus on: {', '.join(entity.macro_drivers)}
-4. Bullish Case: Growth catalysts, valuation opportunities
-5. Bearish Case: Risks, valuation concerns
-6. Investment Thesis: Overall assessment and key takeaways
+    CRITICAL REASONING FRAMEWORK:
+    1. CAUSAL MAPPING: Clearly explain how {', '.join(entity.macro_drivers)} directly affect {entity.company_name}'s margins, cost of capital, or demand.
+    2. EVIDENCE RANKING: Prioritize SEC/Filings/Central Banks. Use earnings transcripts to analyze management signals and tone.
+    3. FINANCIAL REALISM: Do not provide generic bullishness. Balance valuation, risks, and catalysts.
+    4. STRUCTURED OUTPUT: 
+    - Investment Thesis: Institutional summary.
+    - Catalyst Timeline: 3-6 month events.
+    - Macro/Causal Chains: Cause-and-effect mapping.
+    - Financial/Valuation Context: Ratios, growth sustainability.
+    - Risks: Mitigating/exacerbating factors.
 
-Be data-driven and maintain an institutional tone."""
-
+    STRICT RULES:
+    - REJECT generic market fluff.
+    - FOCUS on {entity.ticker} and its specific macro exposures.
+    - If data is ambiguous, clearly state confidence/risk."""
     @staticmethod
     def _calculate_investment_score(
         bullish: list,
