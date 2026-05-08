@@ -119,8 +119,10 @@ export async function getNewsArticles(query: {
   const limit = query.limit ?? 20;
 
   const fetchJobs: Array<Promise<NewsArticle[]>> = [
-    ...GENERIC_FEEDS.map(async (feed) =>
-      parseFeed(feed.source, await fetchFeed(feed.source, feed.url), terms).catch(() => []),
+    ...GENERIC_FEEDS.map((feed) =>
+      fetchFeed(feed.source, feed.url)
+        .then((xml) => parseFeed(feed.source, xml, terms))
+        .catch(() => []),
     ),
   ];
 
