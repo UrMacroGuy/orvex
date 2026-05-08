@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls C:/Users/praty/orvex/backend)",
+      "Bash(ls C:/Users/praty/orvex/backend/app)",
+      "Bash(ls C:/Users/praty/orvex/backend/app/schemas)",
+      "Bash(cmd *)",
+      "Bash(python -m compileall -q app)",
+      "Bash(python -c \"import sys; sys.path.insert\\(0,'.'\\); import app.main\")",
+      "Bash(python -m uvicorn app.main:app --reload)",
+      "Bash(.\\\\venv\\\\Scripts\\\\activate)",
+      "Bash(./venv/Scripts/python.exe -m uvicorn app.main:app --reload)",
+      "Bash(curl -s http://127.0.0.1:8000/docs)",
+      "Bash(taskkill /f /im python.exe)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8000)",
+      "Bash(./venv/Scripts/python.exe *)",
+      "Bash(curl -s http://127.0.0.1:8000/openapi.json)",
+      "Bash(curl *)",
+      "Bash(python -c \"from app.main import app; print\\('Backend imports OK'\\)\")",
+      "Bash(python -m py_compile app/services/financial_service.py app/api/v1/financial.py)",
+      "Bash(python -c \"from app.main import app; print\\('✓ Backend imports OK'\\)\")",
+      "Bash(python -m pytest test_financial_integration.py -v)",
+      "Bash(python test_financial_integration.py)",
+      "Bash(python -c \"from app.financial.pipeline import FinancialOrchestrationPipeline; from app.services.financial_service import FinancialQueryService; print\\('✓ Imports successful'\\)\")",
+      "Bash(python)",
+      "Bash(npm run *)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/api/v1/auth/register\" -Method POST -ContentType \"application/json\" -Body '{\"email\":\"test@example.com\",\"password\":\"Test1234!\",\"name\":\"Test User\"}' 2>&1)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(pkill -f \"next dev\")",
+      "PowerShell(Stop-Process -Id 5080 -Force)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(npx tsc *)",
+      "PowerShell($pid = \\(Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue\\).OwningProcess; if \\($pid\\) { Stop-Process -Id $pid -Force; Write-Host \"Killed PID $pid\" } else { Write-Host \"Nothing on 8000\" })",
+      "PowerShell(python -c \"import aiosqlite; print\\('aiosqlite OK'\\)\" 2>&1)",
+      "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MjkxYmQ2OS1mYzU0LTQxZjUtYjVmMS0zNDBhMTIzYzM0MzkiLCJpYXQiOjE3NzgyMDQwNzYsImV4cCI6MTc3ODgwODg3Nn0.K9PEkEdyq95lDz-nxiM4N3LFMowbiz9ulfWTzmDmB-U\"; $headers = @{Authorization = \"Bearer $token\"}; $resp = Invoke-RestMethod -Uri \"http://127.0.0.1:8000/api/v1/auth/me\" -Method GET -Headers $headers -ErrorAction Stop; $resp | ConvertTo-Json -Depth 5)",
+      "Bash(python -c ' *)"
+    ]
+  }
+}

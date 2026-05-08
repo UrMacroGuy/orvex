@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orvex Investor Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: #050816;
+      color: white;
+      overflow-x: hidden;
+      font-family: Inter, sans-serif;
+    }
+
+    .glass {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .gradient-text {
+      background: linear-gradient(to right, #7c3aed, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .grid-bg {
+      background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-6px);
+      border-color: rgba(124,58,237,0.6);
+      box-shadow: 0 0 25px rgba(124,58,237,0.2);
+    }
+
+    .glow {
+      box-shadow: 0 0 60px rgba(124,58,237,0.25);
+    }
+
+    .timeline-line {
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <nav class="fixed top-0 w-full z-50 bg-[#050816]/80 backdrop-blur-lg border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="text-2xl font-bold gradient-text">Orvex</div>
+      <div class="hidden md:flex gap-8 text-sm text-gray-300">
+        <a href="#vision" class="hover:text-white">Vision</a>
+        <a href="#architecture" class="hover:text-white">Architecture</a>
+        <a href="#market" class="hover:text-white">Market</a>
+        <a href="#business" class="hover:text-white">Business</a>
+        <a href="#roadmap" class="hover:text-white">Roadmap</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="min-h-screen flex items-center justify-center px-6 pt-24">
+    <div class="max-w-7xl w-full grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm mb-6">
+          <span class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+          Multi-Agent Intelligence Infrastructure
+        </div>
+
+        <h1 class="text-6xl lg:text-7xl font-black leading-tight mb-8">
+          The Future of
+          <span class="gradient-text">AI Orchestration</span>
+        </h1>
+
+        <p class="text-xl text-gray-300 leading-relaxed mb-10 max-w-2xl">
+          Orvex is a multi-model intelligence platform that orchestrates Claude, GPT, Gemini, web research, and future AI systems into one unified research and reasoning engine.
+        </p>
+
+        <div class="flex flex-wrap gap-4 mb-10">
+          <button class="px-8 py-4 rounded-2xl bg-violet-600 hover:bg-violet-500 font-semibold transition glow">
+            Investor Demo
+          </button>
+          <button class="px-8 py-4 rounded-2xl glass hover:bg-white/10 transition font-semibold">
+            Product Vision
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="text-3xl font-bold text-cyan-400">4+</div>
+            <div class="text-sm text-gray-400 mt-2">LLM Providers</div>
+          </div>
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="text-3xl font-bold text-violet-400">1</div>
+            <div class="text-sm text-gray-400 mt-2">Unified Intelligence Layer</div>
+          </div>
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="text-3xl font-bold text-green-400">BYOK</div>
+            <div class="text-sm text-gray-400 mt-2">Bring Your Own Keys</div>
+          </div>
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="text-3xl font-bold text-pink-400">∞</div>
+            <div class="text-sm text-gray-400 mt-2">Scalable Workflows</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-[32px] p-8 border border-violet-500/20">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <div class="text-xl font-bold">Live Intelligence Workflow</div>
+            <div class="text-gray-400 text-sm">Investor Visualization</div>
+          </div>
+          <div class="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
+            Active
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="glass rounded-2xl p-4 border border-cyan-400/20">
+            <div class="text-sm text-cyan-400 mb-2">User Query</div>
+            <div class="font-medium">“Should startups adopt microservices early?”</div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="glass rounded-2xl p-4 border border-violet-400/20">
+              <div class="flex justify-between mb-2">
+                <span class="font-semibold">Claude</span>
+                <span class="text-green-400 text-sm">Connected</span>
+              </div>
+              <p class="text-sm text-gray-300">Prioritizes maintainability and recommends monolith-first architecture.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-4 border border-green-400/20">
+              <div class="flex justify-between mb-2">
+                <span class="font-semibold">GPT</span>
+                <span class="text-green-400 text-sm">Connected</span>
+              </div>
+              <p class="text-sm text-gray-300">Suggests scalability benefits but warns against premature complexity.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-4 border border-yellow-400/20">
+              <div class="flex justify-between mb-2">
+                <span class="font-semibold">Gemini</span>
+                <span class="text-green-400 text-sm">Connected</span>
+              </div>
+              <p class="text-sm text-gray-300">Focuses on long-term flexibility and infrastructure tradeoffs.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-4 border border-pink-400/20">
+              <div class="flex justify-between mb-2">
+                <span class="font-semibold">Web Research</span>
+                <span class="text-cyan-400 text-sm">Live Sources</span>
+              </div>
+              <p class="text-sm text-gray-300">Industry blogs and engineering teams recommend monolith-first for most startups.</p>
+            </div>
+          </div>
+
+          <div class="glass rounded-2xl p-5 border border-violet-500/30">
+            <div class="text-violet-300 font-semibold mb-3">Orvex Intelligence Synthesis</div>
+            <p class="text-gray-200 leading-relaxed">
+              Strong consensus across models and web sources suggests startups should begin with modular monoliths. Microservices become advantageous only after scaling complexity justifies distributed infrastructure.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="vision" class="py-24 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="mb-16 text-center">
+        <div class="text-cyan-400 font-semibold mb-3">CORE VISION</div>
+        <h2 class="text-5xl font-black mb-6">AI Infrastructure, Not Another Chatbot</h2>
+        <p class="text-gray-400 max-w-3xl mx-auto text-lg">
+          Orvex positions itself as the orchestration layer above frontier models, enabling multi-model intelligence, context synthesis, memory systems, and workflow execution.
+        </p>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <div class="glass rounded-3xl p-8 card-hover">
+          <div class="text-5xl mb-6">🧠</div>
+          <h3 class="text-2xl font-bold mb-4">Intelligence Aggregation</h3>
+          <p class="text-gray-400 leading-relaxed">
+            Query multiple LLMs simultaneously and synthesize coherent, consensus-driven intelligence.
+          </p>
+        </div>
+
+        <div class="glass rounded-3xl p-8 card-hover">
+          <div class="text-5xl mb-6">⚡</div>
+          <h3 class="text-2xl font-bold mb-4">Context Efficiency</h3>
+          <p class="text-gray-400 leading-relaxed">
+            Reduce token waste through selective memory retrieval and intelligent routing.
+          </p>
+        </div>
+
+        <div class="glass rounded-3xl p-8 card-hover">
+          <div class="text-5xl mb-6">🔗</div>
+          <h3 class="text-2xl font-bold mb-4">Workflow Orchestration</h3>
+          <p class="text-gray-400 leading-relaxed">
+            Coordinate AI systems, research pipelines, and future autonomous workflows.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture" class="py-24 px-6 bg-black/20">
+    <div class="max-w-7xl mx-auto">
+      <div class="mb-16 text-center">
+        <div class="text-violet-400 font-semibold mb-3">SYSTEM ARCHITECTURE</div>
+        <h2 class="text-5xl font-black mb-6">Distributed Intelligence Engine</h2>
+      </div>
+
+      <div class="glass rounded-[32px] p-10 overflow-x-auto">
+        <div class="min-w-[900px]">
+          <div class="flex justify-center mb-8">
+            <div class="glass px-8 py-4 rounded-2xl border border-cyan-400/20 text-center">
+              <div class="font-bold text-lg">Next.js Frontend</div>
+              <div class="text-gray-400 text-sm">Research Dashboard UI</div>
+            </div>
+          </div>
+
+          <div class="flex justify-center mb-8">
+            <div class="w-1 h-12 bg-violet-500"></div>
+          </div>
+
+          <div class="flex justify-center mb-12">
+            <div class="glass px-8 py-4 rounded-2xl border border-violet-400/20 text-center">
+              <div class="font-bold text-lg">FastAPI Orchestration Core</div>
+              <div class="text-gray-400 text-sm">Routing • State • Coordination</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-6">
+            <div class="glass rounded-2xl p-6 text-center border border-cyan-400/20">
+              <div class="text-xl font-bold mb-2">Claude</div>
+              <div class="text-sm text-gray-400">Reasoning & Coding</div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 text-center border border-green-400/20">
+              <div class="text-xl font-bold mb-2">GPT</div>
+              <div class="text-sm text-gray-400">General Intelligence</div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 text-center border border-yellow-400/20">
+              <div class="text-xl font-bold mb-2">Gemini</div>
+              <div class="text-sm text-gray-400">Long Context</div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 text-center border border-pink-400/20">
+              <div class="text-xl font-bold mb-2">Web Layer</div>
+              <div class="text-sm text-gray-400">Research & Verification</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="market" class="py-24 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="mb-16 text-center">
+        <div class="text-green-400 font-semibold mb-3">MARKET OPPORTUNITY</div>
+        <h2 class="text-5xl font-black mb-6">Positioned Inside a Rapidly Expanding AI Infrastructure Market</h2>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div class="glass rounded-3xl p-8">
+          <canvas id="marketChart"></canvas>
+        </div>
+
+        <div class="space-y-6">
+          <div class="glass rounded-2xl p-6 card-hover">
+            <div class="text-2xl font-bold mb-2">Developer AI Tools</div>
+            <div class="text-gray-400">Massive demand for orchestration, coding workflows, and intelligence systems.</div>
+          </div>
+
+          <div class="glass rounded-2xl p-6 card-hover">
+            <div class="text-2xl font-bold mb-2">Research Automation</div>
+            <div class="text-gray-400">Businesses increasingly rely on synthesized intelligence rather than isolated LLM outputs.</div>
+          </div>
+
+          <div class="glass rounded-2xl p-6 card-hover">
+            <div class="text-2xl font-bold mb-2">AI Infrastructure Shift</div>
+            <div class="text-gray-400">Competitive advantage is shifting from foundation models toward orchestration and workflow systems.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="business" class="py-24 px-6 bg-black/20">
+    <div class="max-w-7xl mx-auto">
+      <div class="mb-16 text-center">
+        <div class="text-pink-400 font-semibold mb-3">BUSINESS MODEL</div>
+        <h2 class="text-5xl font-black mb-6">Scalable SaaS Economics</h2>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <div class="glass rounded-3xl p-8 border border-white/10 card-hover">
+          <div class="text-3xl font-bold mb-4">Free</div>
+          <div class="text-5xl font-black mb-6">₹0</div>
+          <ul class="space-y-4 text-gray-300">
+            <li>• Limited daily queries</li>
+            <li>• BYOK integrations</li>
+            <li>• Basic synthesis</li>
+            <li>• Community access</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-8 border-2 border-violet-500 glow card-hover">
+          <div class="text-3xl font-bold mb-4">Pro</div>
+          <div class="text-5xl font-black mb-6">₹1999/mo</div>
+          <ul class="space-y-4 text-gray-300">
+            <li>• Advanced intelligence synthesis</li>
+            <li>• Long-term memory</li>
+            <li>• Deep research workflows</li>
+            <li>• Premium orchestration</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-8 border border-white/10 card-hover">
+          <div class="text-3xl font-bold mb-4">Enterprise</div>
+          <div class="text-5xl font-black mb-6">Custom</div>
+          <ul class="space-y-4 text-gray-300">
+            <li>• Team workflows</li>
+            <li>• Private deployment</li>
+            <li>• API access</li>
+            <li>• Workflow automation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap" class="py-24 px-6">
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-16 text-center">
+        <div class="text-cyan-400 font-semibold mb-3">ROADMAP</div>
+        <h2 class="text-5xl font-black mb-6">Execution Timeline</h2>
+      </div>
+
+      <div class="relative">
+        <div class="timeline-line"></div>
+
+        <div class="space-y-12">
+          <div class="relative pl-20">
+            <div class="absolute left-0 top-2 w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center font-bold">1</div>
+            <div class="glass rounded-2xl p-6">
+              <div class="text-2xl font-bold mb-2">Month 1 — MVP Launch</div>
+              <p class="text-gray-400">
+                Multi-model querying, synthesis engine, web research, clean UI, BYOK architecture.
+              </p>
+            </div>
+          </div>
+
+          <div class="relative pl-20">
+            <div class="absolute left-0 top-2 w-12 h-12 rounded-full bg-cyan-600 flex items-center justify-center font-bold">2</div>
+            <div class="glass rounded-2xl p-6">
+              <div class="text-2xl font-bold mb-2">Phase 2 — Persistent Intelligence</div>
+              <p class="text-gray-400">
+                Long-term memory, context retrieval, project workspaces, workflow state tracking.
+              </p>
+            </div>
+          </div>
+
+          <div class="relative pl-20">
+            <div class="absolute left-0 top-2 w-12 h-12 rounded-full bg-green-600 flex items-center justify-center font-bold">3</div>
+            <div class="glass rounded-2xl p-6">
+              <div class="text-2xl font-bold mb-2">Phase 3 — Autonomous Workflows</div>
+              <p class="text-gray-400">
+                Research agents, coding pipelines, automation systems, enterprise workflows.
+              </p>
+            </div>
+          </div>
+
+          <div class="relative pl-20">
+            <div class="absolute left-0 top-2 w-12 h-12 rounded-full bg-pink-600 flex items-center justify-center font-bold">4</div>
+            <div class="glass rounded-2xl p-6">
+              <div class="text-2xl font-bold mb-2">Phase 4 — AI Infrastructure Platform</div>
+              <p class="text-gray-400">
+                SDKs, integrations, workflow marketplace, enterprise ecosystem expansion.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-24 px-6">
+    <div class="max-w-6xl mx-auto">
+      <div class="glass rounded-[40px] p-12 text-center border border-violet-500/20 glow">
+        <div class="text-violet-400 font-semibold mb-4">FINAL POSITIONING</div>
+        <h2 class="text-6xl font-black mb-8 leading-tight">
+          Orvex is Building the
+          <span class="gradient-text">Intelligence Layer</span>
+          Above Foundation Models
+        </h2>
+
+        <p class="text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed mb-10">
+          As foundation models become commodities, competitive advantage shifts toward orchestration, memory, workflow intelligence, and execution reliability. Orvex is positioned directly inside that transition.
+        </p>
+
+        <div class="flex justify-center gap-6 flex-wrap">
+          <button class="px-8 py-4 rounded-2xl bg-violet-600 hover:bg-violet-500 font-semibold transition">
+            Investor Contact
+          </button>
+          <button class="px-8 py-4 rounded-2xl glass hover:bg-white/10 transition font-semibold">
+            Product Walkthrough
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const ctx = document.getElementById('marketChart');
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [
+          'AI Infrastructure',
+          'Developer AI Tools',
+          'Research Automation',
+          'Workflow AI',
+          'Enterprise AI'
+        ],
+        datasets: [{
+          label: 'Projected Market Growth',
+          data: [92, 78, 64, 88, 81],
+          borderRadius: 12,
+          backgroundColor: [
+            'rgba(124,58,237,0.8)',
+            'rgba(6,182,212,0.8)',
+            'rgba(16,185,129,0.8)',
+            'rgba(236,72,153,0.8)',
+            'rgba(245,158,11,0.8)'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: {
+              color: 'white'
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: 'white'
+            },
+            grid: {
+              color: 'rgba(255,255,255,0.05)'
+            }
+          },
+          y: {
+            ticks: {
+              color: 'white'
+            },
+            grid: {
+              color: 'rgba(255,255,255,0.05)'
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

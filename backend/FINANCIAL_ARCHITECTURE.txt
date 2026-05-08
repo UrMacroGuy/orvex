@@ -1,0 +1,268 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    FINANCIAL RESEARCH ORCHESTRATION LAYER                       ║
+║                          Architecture Diagram                                    ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+
+                            ┌─────────────────────┐
+                            │  Financial Query    │
+                            │  (ticker, models)   │
+                            └──────────┬──────────┘
+                                       │
+                    ┌──────────────────┴───────────────────┐
+                    │                                      │
+                    ▼                                      ▼
+        ┌──────────────────────┐          ┌──────────────────────┐
+        │   API Endpoint       │          │  Services Layer      │
+        │  /financial/research │          │ FinancialQueryService│
+        └──────────┬───────────┘          └──────────┬───────────┘
+                   │                                  │
+                   └──────────────────┬───────────────┘
+                                      │
+                                      ▼
+                    ┌─────────────────────────────────┐
+                    │ Financial Orchestration Pipeline│
+                    │   (app/financial/pipeline.py)   │
+                    └────────────┬────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │  Core Orchestration     │  ◄─── Reuses existing
+                    │  Pipeline               │       OrchestrationPipeline
+                    │  (parallel execution)   │       from base Orvex
+                    └────────────┬────────────┘
+                                 │
+            ┌────────────────────┼────────────────────┐
+            │                    │                    │
+            ▼                    ▼                    ▼
+    ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+    │ Model Response  │ │ Model Response  │ │ Model Response  │
+    │ from Claude     │ │ from OpenAI     │ │ from Gemini     │
+    │ + Perplexity    │ │ + DeepSeek      │ │ + Others        │
+    └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+             │                    │                   │
+             └────────────────────┼───────────────────┘
+                                  │
+                    ┌─────────────┴──────────────┐
+                    │                            │
+                    ▼                            ▼
+        ┌────────────────────┐      ┌────────────────────┐
+        │  Market Research   │      │  Thesis Extraction │
+        │  Agent             │      │  (Bullish/Bearish) │
+        │                    │      │                    │
+        │ • Company analysis │      │ • Growth catalysts │
+        │ • Sector analysis  │      │ • Risks identified │
+        │ • Macro factors    │      │ • Valuations       │
+        │ • Key metrics      │      │ • Competition      │
+        └────────┬───────────┘      └────────┬───────────┘
+                 │                           │
+        MarketResearchResult      BullishThesis/BearishThesis
+                 │                           │
+                 └─────────────┬─────────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+                ▼                             ▼
+    ┌────────────────────┐      ┌────────────────────┐
+    │ Consensus Engine   │      │ Contradiction      │
+    │                    │      │ Engine             │
+    │ • Detect agreement │      │                    │
+    │ • Confidence score │      │ • Find disagreements
+    │ • Evidence assess  │      │ • Assumption conflicts
+    │ • Multi-provider   │      │ • Risk disagreements
+    │   voting           │      │                    │
+    └────────┬───────────┘      └────────┬───────────┘
+             │                           │
+    ConsensusPoint[...]       Contradiction[...]
+             │                           │
+             └─────────────┬─────────────┘
+                           │
+                           ▼
+            ┌──────────────────────────────┐
+            │  Investment Scoring & Synthesis
+            │                              │
+            │ • Score: bull - bear + boost │
+            │ • Key questions generation   │
+            │ • Research areas suggestion  │
+            │ • Full thesis compilation    │
+            └────────────┬─────────────────┘
+                         │
+                         ▼
+            ┌──────────────────────────────┐
+            │  FinancialSynthesis Output   │
+            │                              │
+            │ {                            │
+            │   ticker: "NVDA"             │
+            │   company: {...}             │
+            │   bullish_theses: [...]      │
+            │   bearish_theses: [...]      │
+            │   consensus_points: [...]    │
+            │   contradictions: [...]      │
+            │   investment_score: 0.42     │
+            │   key_questions: [...]       │
+            │   next_research_areas: [...] │
+            │ }                            │
+            └──────────┬───────────────────┘
+                       │
+           ┌───────────┴────────────┐
+           │                        │
+           ▼                        ▼
+    ┌────────────────┐   ┌────────────────────┐
+    │ Database       │   │ Streaming Response │
+    │ Persistence    │   │ to Frontend (SSE)  │
+    │                │   │                    │
+    │ Query results  │   │ • Progress events  │
+    │ Synthesis data │   │ • Final results    │
+    │ Model responses│   │ • Real-time update │
+    └────────────────┘   └────────────────────┘
+
+
+                      DATA FLOW - SEQUENTIAL PROCESSING
+
+┌─────────────┐
+│   Input     │  FinancialQueryCreate
+│             │  { ticker, query, models, focus_areas }
+└──────┬──────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Query Orchestration  │  Routes query to selected models
+└──────┬───────────────┘  (parallel execution via base pipeline)
+       │
+       ▼
+┌──────────────────────┐
+│ Parallel Model Exec  │  All models run concurrently
+└──────┬───────────────┘  Normalized responses collected
+       │
+       ▼
+┌──────────────────────┐
+│ Analysis Stage 1     │  Independent extraction in parallel:
+│  - Market research   │  • Market research agent
+│  - Thesis extraction │  • Bullish thesis agent
+│  - Deduplication     │  • Bearish thesis agent
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Analysis Stage 2     │  Dependency analysis across results:
+│  - Consensus detect  │  • Consensus engine
+│  - Contradiction     │  • Contradiction engine
+│    identify          │
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Analysis Stage 3     │  Synthesis and scoring:
+│  - Score calculation │  • Investment score
+│  - Questions generate│  • Key questions
+│  - Suggestions       │  • Research areas
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Output Generation    │  FinancialSynthesis object
+└──────┬───────────────┘
+       │
+       ├──► Database (persist)
+       │
+       └──► Streaming Response (real-time updates)
+
+
+                            MODULE ORGANIZATION
+
+backend/app/
+├── schemas/
+│   └── financial.py                    ◄─ Data models
+│
+├── financial/
+│   ├── __init__.py                     ◄─ Exports all agents
+│   ├── market_research_agent.py         ◄─ Stage 1: Research extraction
+│   ├── bullish_agent.py                 ◄─ Stage 1: Bullish extraction
+│   ├── bearish_agent.py                 ◄─ Stage 1: Bearish extraction
+│   ├── consensus_engine.py              ◄─ Stage 2: Consensus detection
+│   ├── contradiction_engine.py          ◄─ Stage 2: Disagreement finding
+│   └── pipeline.py                      ◄─ Stage 3: Orchestration
+│
+├── services/
+│   └── financial_service.py             ◄─ Query execution service
+│
+└── api/v1/
+    └── financial.py                     ◄─ REST endpoints
+
+
+                           PROCESSING TIMELINE
+
+Query Received
+    │
+    ├─► Parse request (5ms)
+    │
+    ├─► Execute models in parallel (30-120s per model)
+    │
+    ├─► Market research extraction (100ms all models)
+    │
+    ├─► Thesis extraction & dedup (150ms all models)
+    │
+    ├─► Consensus detection (20ms)
+    │
+    ├─► Contradiction analysis (20ms)
+    │
+    ├─► Investment scoring (1ms)
+    │
+    ├─► Database persist (10ms)
+    │
+    └─► Respond with results
+
+
+                        KEY DESIGN PRINCIPLES
+
+1. MODULARITY
+   ├─ Each agent independent
+   ├─ No inter-agent dependencies
+   └─ Easy to test and extend
+
+2. DETERMINISM
+   ├─ No randomization
+   ├─ Same input → same output
+   ├─ Reproducible analysis
+   └─ MD5-based consistent IDs
+
+3. CONSENSUS-FOCUSED
+   ├─ Multi-model agreement emphasized
+   ├─ Contradictions highlighted
+   ├─ No fake consensus
+   └─ Confidence reflects breadth
+
+4. EXTENSIBILITY
+   ├─ New agents easy to add
+   ├─ Pluggable configuration
+   ├─ Custom focus areas
+   └─ Scoring formula tunable
+
+5. INTEGRATION
+   ├─ Reuses OrchestrationPipeline
+   ├─ Existing provider infrastructure
+   ├─ Standard event streaming
+   └─ Database persistence via existing models
+
+
+CONFIDENCE & EVIDENCE STRENGTH MATRIX
+
+                Confidence
+         Low        Medium       High        Very High
+         0.4-0.6    0.6-0.75     0.75-0.9    0.9-1.0
+    ┌────────────┬────────────┬────────────┬────────────┐
+    │  Weak      │ Weak       │ Moderate   │ Moderate   │
+    │ (nascent)  │            │            │            │
+Weak├────────────┼────────────┼────────────┼────────────┤
+    │  Weak      │ Moderate   │ Strong     │ Very       │
+    │            │            │            │ Strong     │
+    ├────────────┼────────────┼────────────┼────────────┤
+    │ Moderate   │ Moderate   │ Strong     │ Very       │
+    │            │            │            │ Strong     │
+Strong├────────────┼────────────┼────────────┼────────────┤
+    │ Moderate   │ Strong     │ Very       │ Very       │
+    │            │            │ Strong     │ Strong     │
+    ├────────────┼────────────┼────────────┼────────────┤
+Very │ Strong     │ Very       │ Very       │ Very       │
+High │            │ Strong     │ Strong     │ Strong     │
+    └────────────┴────────────┴────────────┴────────────┘
