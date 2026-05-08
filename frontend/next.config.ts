@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+const rootPath = path.join(__dirname, "../");
+
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: rootPath,
   turbopack: {
-    root: path.join(__dirname),
+    root: rootPath,
   },
 };
 
