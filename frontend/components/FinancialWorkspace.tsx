@@ -253,6 +253,7 @@ export function FinancialWorkspace() {
                 return (
                   <label
                     key={key}
+                    onClick={() => toggleModel(opt)}
                     className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg cursor-pointer transition ${
                       checked
                         ? "bg-slate-800/60"
@@ -561,4 +562,3 @@ export function FinancialWorkspace() {
     </div>
   );
 }
-

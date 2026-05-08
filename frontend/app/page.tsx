@@ -7,15 +7,18 @@ import { motion } from "framer-motion";
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, token } = useAuthStore();
+  const { user, session, isLoading } = useAuthStore();
 
   useEffect(() => {
-    if (token && user) {
+    if (isLoading) {
+      return;
+    }
+    if (session && user) {
       router.push("/financial");
     } else {
       router.push("/login");
     }
-  }, [token, user, router]);
+  }, [isLoading, router, session, user]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">

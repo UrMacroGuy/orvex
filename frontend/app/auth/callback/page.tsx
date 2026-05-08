@@ -10,23 +10,22 @@ function OAuthCallbackContent() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { setUser, setToken } = useAuthStore();
+  const { setUser, setProfile, setSession } = useAuthStore();
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
         const code = searchParams.get("code");
-        const state = searchParams.get("state");
-        const provider = searchParams.get("provider");
 
-        if (!code || !state || !provider) {
-          setError("Missing required parameters");
+        if (!code) {
+          setError("Missing authorization code");
           return;
         }
 
-        const response = await authService.handleOAuthCallback(provider, code, state);
-        setUser(response.user);
-        setToken(response.access_token);
+        const response = await authService.exchangeCodeForSession(code);
+        setSession(response.session ?? null);
+        setUser(response.user ?? null);
+        setProfile(await authService.getProfile());
 
         router.push("/onboarding");
       } catch (err) {
@@ -42,7 +41,7 @@ function OAuthCallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router, setUser, setToken]);
+  }, [router, searchParams, setProfile, setSession, setUser]);
 
   if (isLoading) {
     return (

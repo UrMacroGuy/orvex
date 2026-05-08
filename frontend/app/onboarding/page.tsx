@@ -73,7 +73,7 @@ type Step = "welcome" | "providers" | "keys" | "complete";
 export default function OnboardingPage() {
   useRequireAuth();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>("welcome");
   const [selectedProviders, setSelectedProviders] = useState<Set<string>>(
     new Set(["openrouter"])
@@ -101,7 +101,7 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      const api = (await import("@/lib/api")).default;
+      const { authService } = await import("@/services/authService");
 
       const entries = Array.from(selectedProviders)
         .filter((providerId) => apiKeys[providerId])
@@ -112,7 +112,7 @@ export default function OnboardingPage() {
         }));
 
       for (const entry of entries) {
-        await api.post("/keys", entry);
+        await authService.saveProviderKey(entry);
       }
 
       setStep("complete");
@@ -143,12 +143,12 @@ export default function OnboardingPage() {
                 Welcome to Orvex, {user?.name}!
               </h1>
               <p className="text-xl text-slate-400 mb-12">
-                Let's set up your AI providers to orchestrate intelligence
+                Let&apos;s set up your AI providers to orchestrate intelligence
               </p>
 
               <div className="space-y-4 mb-8">
                 <p className="text-slate-300">
-                  You'll need API keys from at least one provider. We recommend starting with
+                  You&apos;ll need API keys from at least one provider. We recommend starting with
                   OpenRouter for the fastest setup.
                 </p>
               </div>
@@ -313,7 +313,7 @@ export default function OnboardingPage() {
                 </div>
               </motion.div>
 
-              <h2 className="text-3xl font-light mb-4 text-white">You're all set!</h2>
+              <h2 className="text-3xl font-light mb-4 text-white">You&apos;re all set!</h2>
               <p className="text-lg text-slate-400 mb-12">
                 Your account is ready to orchestrate AI intelligence across{" "}
                 {selectedProviders.size > 0

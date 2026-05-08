@@ -4,13 +4,13 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 export function useRequireAuth() {
   const router = useRouter();
-  const { token, user } = useAuthStore();
+  const { session, user, isLoading } = useAuthStore();
 
   useEffect(() => {
-    if (!token || !user) {
+    if (!isLoading && (!session || !user)) {
       router.push("/login");
     }
-  }, [token, user, router]);
+  }, [isLoading, router, session, user]);
 
-  return { isAuthenticated: !!token && !!user };
+  return { isAuthenticated: !!session && !!user };
 }

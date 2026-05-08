@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
-import api from "@/lib/api";
-import { ExternalLink, Key, CheckCircle2 } from "lucide-react";
+import { authService } from "@/services/authService";
+import { ExternalLink, Key } from "lucide-react";
 
 interface ProviderConfig {
   id: string;
@@ -34,7 +34,11 @@ export const ProviderConnectionModal = ({ providerId, isOpen, onClose }: { provi
 
   const handleConnect = async () => {
     try {
-      await api.post('/keys', { provider_id: providerId, key, label: `${provider.name} Key` });
+      await authService.saveProviderKey({
+        provider_id: providerId,
+        key,
+        label: `${provider.name} Key`,
+      });
       setConnected(providerId, true);
       onClose();
     } catch (e) {

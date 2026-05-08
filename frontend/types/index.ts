@@ -13,5 +13,5 @@ export interface ProviderResponse {
 
 export interface SynthesisEvent {
   type: 'response' | 'synthesis' | 'citation' | 'disagreement' | 'complete';
-  data: any;
+  data: unknown;
 }

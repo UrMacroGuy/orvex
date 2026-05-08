@@ -30,19 +30,11 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    try {
-      authService.initiateOAuth("google");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google login failed");
-    }
+    authService.initiateOAuth("google");
   };
 
   const handleGithubLogin = () => {
-    try {
-      authService.initiateOAuth("github");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "GitHub login failed");
-    }
+    authService.initiateOAuth("github");
   };
 
   return (
@@ -69,9 +61,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
               <Input
                 type="email"
                 value={email}
@@ -84,14 +74,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="********"
                 required
                 disabled={isLoading}
                 className="w-full"
@@ -136,7 +124,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-slate-400 text-sm">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/signup" className="text-sky-400 hover:text-sky-300 font-medium">
               Sign up
             </Link>

@@ -1,47 +1,49 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import type { Session, User } from "@supabase/supabase-js";
 
-export interface User {
+export interface AuthProfile {
   id: string;
   email: string;
   name: string | null;
   oauth_provider: string | null;
   is_verified: boolean;
-  created_at: string;
-  updated_at: string | null;
+  created_at?: string;
+  updated_at?: string | null;
 }
 
 export interface AuthState {
   user: User | null;
-  token: string | null;
+  profile: AuthProfile | null;
+  session: Session | null;
   isLoading: boolean;
   error: string | null;
 
   setUser: (user: User | null) => void;
-  setToken: (token: string | null) => void;
+  setProfile: (profile: AuthProfile | null) => void;
+  setSession: (session: Session | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
-      isLoading: false,
-      error: null,
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  profile: null,
+  session: null,
+  isLoading: true,
+  error: null,
 
-      setUser: (user) => set({ user }),
-      setToken: (token) => set({ token }),
-      setLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
-      logout: () =>
-        set({ user: null, token: null, error: null, isLoading: false }),
+  setUser: (user) => set({ user }),
+  setProfile: (profile) => set({ profile }),
+  setSession: (session) => set({ session }),
+  setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
+  logout: () =>
+    set({
+      user: null,
+      profile: null,
+      session: null,
+      error: null,
+      isLoading: false,
     }),
-    {
-      name: "auth-store",
-      partialize: (state) => ({ token: state.token, user: state.user }),
-    }
-  )
-);
+}));

@@ -1,23 +1,33 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore, type User } from "@/store/useAuthStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { authService } from "@/services/authService";
 
 export interface UseAuthReturn {
-  user: User | null;
-  token: string | null;
+  user: ReturnType<typeof useAuthStore.getState>["profile"];
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
 export function useAuth(): UseAuthReturn {
   const router = useRouter();
-  const { user, token, isLoading, error, setUser, setToken, setLoading, setError, logout } =
-    useAuthStore();
+  const {
+    user,
+    profile,
+    session,
+    isLoading,
+    error,
+    setUser,
+    setProfile,
+    setSession,
+    setLoading,
+    setError,
+    logout,
+  } = useAuthStore();
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -25,9 +35,10 @@ export function useAuth(): UseAuthReturn {
       setError(null);
       try {
         const response = await authService.login(email, password);
-        setUser(response.user);
-        setToken(response.access_token);
-        router.push("/onboarding");
+        setSession(response.session ?? null);
+        setUser(response.user ?? null);
+        setProfile(await authService.getProfile());
+        router.push("/financial");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Login failed";
         setError(message);
@@ -36,7 +47,7 @@ export function useAuth(): UseAuthReturn {
         setLoading(false);
       }
     },
-    [setUser, setToken, setLoading, setError, router]
+    [router, setError, setLoading, setProfile, setSession, setUser],
   );
 
   const signup = useCallback(
@@ -45,9 +56,10 @@ export function useAuth(): UseAuthReturn {
       setError(null);
       try {
         const response = await authService.register(email, password, name);
-        setUser(response.user);
-        setToken(response.access_token);
-        router.push("/onboarding");
+        setSession(response.session ?? null);
+        setUser(response.user ?? null);
+        setProfile(await authService.getProfile());
+        router.push(response.session ? "/onboarding" : "/login");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Signup failed";
         setError(message);
@@ -56,22 +68,22 @@ export function useAuth(): UseAuthReturn {
         setLoading(false);
       }
     },
-    [setUser, setToken, setLoading, setError, router]
+    [router, setError, setLoading, setProfile, setSession, setUser],
   );
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await authService.logout();
     logout();
     router.push("/login");
   }, [logout, router]);
 
   return {
-    user,
-    token,
+    user: profile,
     isLoading,
     error,
     login,
     signup,
     logout: handleLogout,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!session && !!user,
   };
 }

@@ -39,7 +39,7 @@ export function StockHeader({ data }: StockHeaderProps) {
         <div>
           <p className="text-xs text-slate-500 uppercase">Dividend Yield</p>
           <p className="text-sm font-medium text-white">
-            {data.dividend_yield?.toFixed(2)}% || "—"
+            {data.dividend_yield !== undefined ? `${data.dividend_yield.toFixed(2)}%` : "—"}
           </p>
         </div>
         <div>

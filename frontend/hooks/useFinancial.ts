@@ -6,8 +6,9 @@ import { financialApi } from "@/lib/financial-api";
 import { useFinancialStore } from "@/store/useFinancialStore";
 import { FinancialQuery } from "@/types/financial";
 
-// Not yet wired to a live market-data provider — return no-ops.
-export function useTickerData(_ticker: string | null) {
+// Market/ticker hooks can be upgraded to query-backed fetches without changing callers.
+export function useTickerData(ticker: string | null) {
+  void ticker;
   return { data: null, isLoading: false, error: null };
 }
 
@@ -16,20 +17,21 @@ export function useMarketSnapshot() {
 }
 
 export function useFinancialQuery() {
-  const setLoading    = useFinancialStore((s) => s.setLoading);
-  const setError      = useFinancialStore((s) => s.setError);
+  const setLoading = useFinancialStore((s) => s.setLoading);
+  const setError = useFinancialStore((s) => s.setError);
   const addStreamEvent = useFinancialStore((s) => s.addStreamEvent);
-  const abortRef      = useRef<AbortController | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const mutation = useMutation({
     mutationFn: (q: FinancialQuery) => financialApi.createResearch(q),
 
     onMutate: () => {
-      // Cancel any in-flight stream from a previous query
       abortRef.current?.abort();
       abortRef.current = new AbortController();
       setLoading(true);
@@ -41,7 +43,6 @@ export function useFinancialQuery() {
         data.id,
         (event) => {
           addStreamEvent(event);
-          // Stop spinner on terminal events — the store also handles "error"
           if (event.type === "done" || event.type === "error") {
             setLoading(false);
           }

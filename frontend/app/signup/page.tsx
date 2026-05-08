@@ -50,19 +50,11 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignup = () => {
-    try {
-      authService.initiateOAuth("google");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google signup failed");
-    }
+    authService.initiateOAuth("google");
   };
 
   const handleGithubSignup = () => {
-    try {
-      authService.initiateOAuth("github");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "GitHub signup failed");
-    }
+    authService.initiateOAuth("github");
   };
 
   const getPasswordStrengthColor = () => {
@@ -102,9 +94,7 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Full Name
-              </label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
               <Input
                 type="text"
                 value={name}
@@ -117,9 +107,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
               <Input
                 type="email"
                 value={email}
@@ -132,14 +120,12 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
               <Input
                 type="password"
                 value={password}
                 onChange={handlePasswordChange}
-                placeholder="••••••••"
+                placeholder="********"
                 required
                 disabled={isLoading}
                 className="w-full"

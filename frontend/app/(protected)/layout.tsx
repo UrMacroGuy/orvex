@@ -6,15 +6,15 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { token, user } = useAuthStore();
+  const { session, user, isLoading } = useAuthStore();
 
   useEffect(() => {
-    if (!token || !user) {
+    if (!isLoading && (!session || !user)) {
       router.push("/login");
     }
-  }, [token, user, router]);
+  }, [isLoading, router, session, user]);
 
-  if (!token || !user) {
+  if (isLoading || !session || !user) {
     return null;
   }
 

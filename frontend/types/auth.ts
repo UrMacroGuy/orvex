@@ -1,4 +1,4 @@
-export interface User {
+export interface UserProfile {
   id: string;
   email: string;
   name: string | null;
@@ -6,12 +6,6 @@ export interface User {
   is_verified: boolean;
   created_at: string;
   updated_at: string | null;
-}
-
-export interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
 }
 
 export interface LoginRequest {
