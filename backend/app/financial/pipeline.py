@@ -90,7 +90,9 @@ class FinancialOrchestrationPipeline:
             options=options,
         )
         
-        filtered_responses = RelevanceFilter.filter_responses(pipe_result.responses, entity)
+        # --- MULTIDIMENSIONAL RELEVANCE SCORING ---
+        scored_responses = RelevanceFilter.score_responses(pipe_result.responses, entity, payload.query)
+        filtered_responses = [s.response for s in scored_responses]
 
         company = CompanyProfile(
             symbol=entity.ticker if entity else payload.ticker,

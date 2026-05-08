@@ -34,12 +34,23 @@ export interface IntelligencePlan {
 
 const REGION_KEYWORDS: Record<string, string[]> = {
   us: ["us", "u.s.", "america", "american", "fed", "nasdaq", "s&p", "dow"],
-  india: ["india", "indian", "rbi", "nifty", "sensex", "tata", "reliance", "adani"],
+  india: ["india", "indian", "rbi", "nifty", "sensex", "tata", "reliance", "adani", "nse", "bse", "hdfc", "tcs", "vedl"],
   europe: ["europe", "euro", "ecb", "germany", "france", "uk", "european"],
-  china: ["china", "chinese", "beijing", "taiwan", "tsmc", "trade war"],
+  china: ["china", "chinese", "beijing", "taiwan", "tsmc", "trade war", "hsi"],
   japan: ["japan", "japanese", "boj", "nikkei", "toyota"],
   middle_east: ["middle east", "gulf", "opec", "saudi", "uae", "israel", "qatar"],
 };
+
+// Add exchange-specific resolution
+async function resolveGlobalEntity(query: string) {
+  // Mock NSE/BSE lookup logic
+  if (query.toUpperCase().includes("HDFC")) return { symbol: "HDFCBANK.NS", name: "HDFC Bank Ltd", exchange: "NSE" };
+  if (query.toUpperCase().includes("VEDL")) return { symbol: "VEDL.NS", name: "Vedanta Ltd", exchange: "NSE" };
+  if (query.toUpperCase().includes("TCS")) return { symbol: "TCS.NS", name: "Tata Consultancy Services", exchange: "NSE" };
+  if (query.toUpperCase().includes("RELIANCE")) return { symbol: "RELIANCE.NS", name: "Reliance Industries", exchange: "NSE" };
+  return null;
+}
+
 
 const THEME_KEYWORDS: Record<string, string[]> = {
   earnings: ["earnings", "guidance", "quarter", "eps", "revenue", "results", "transcript"],
@@ -126,6 +137,21 @@ async function resolvePrimaryEntity(query: FinancialQuery, focusTerms: string[])
         symbol: seededSymbol,
         kind: "ticker",
         confidence: 0.98,
+      }] satisfies IntelligenceEntity[],
+    };
+  }
+
+  // Global entity resolution
+  const globalMatch = await resolveGlobalEntity(query.query);
+  if (globalMatch) {
+    return {
+      companyName: globalMatch.name,
+      symbol: globalMatch.symbol,
+      entities: [{
+        name: globalMatch.name,
+        symbol: globalMatch.symbol,
+        kind: "company",
+        confidence: 0.95,
       }] satisfies IntelligenceEntity[],
     };
   }

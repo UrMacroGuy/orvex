@@ -16,7 +16,10 @@ import {
   getYahooEarnings,
   getYahooExtendedQuote,
 } from "@/lib/server/providers/yahoo";
+import { getOpenBBFinancials } from "@/lib/server/providers/openbb";
+import { getEarningsTranscript } from "@/lib/server/providers/transcripts";
 import type { FinancialQuery } from "@/types/financial";
+
 
 export interface OpenWebContext {
   analysis: IntelligencePlan;
@@ -96,7 +99,7 @@ export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenW
   const companyName = analysis.company_name ?? query.company_name?.trim();
   const citations: OpenWebContext["citations"] = [];
 
-  const [company, quote, analyst, earnings, secOverview, secRisks, news, reddit, macro, globalMacro] =
+  const [company, quote, analyst, earnings, secOverview, secRisks, news, reddit, macro, globalMacro, openBb, transcript] =
     await Promise.all([
       ticker ? getYahooCompanyProfile(ticker).catch(() => null) : Promise.resolve(null),
       ticker ? getYahooExtendedQuote(ticker).catch(() => null) : Promise.resolve(null),
@@ -117,14 +120,20 @@ export async function gatherOpenWebContext(query: FinancialQuery): Promise<OpenW
         : Promise.resolve(null),
       getMacroOverlay().catch(() => ({ summary: [], series: [] })),
       getGlobalMacroContext(analysis).catch(() => ({ summary: [], theme_impacts: [], market_proxies: [], citations: [] })),
+      ticker ? getOpenBBFinancials(ticker).catch(() => null) : Promise.resolve(null),
+      ticker ? getEarningsTranscript(ticker, "Q4", 2024).catch(() => null) : Promise.resolve(null),
     ]);
 
+
+  // TODO: Use OpenBB and transcript data
   const companyOverview = [
     company
       ? `${company.company_name} (${company.symbol}) operates in ${company.sector ?? "unknown sector"} / ${company.industry ?? "unknown industry"}.`
       : null,
     companyName && !company ? `${companyName} is the primary entity inferred from the user query.` : null,
     company?.description?.slice(0, 400) ?? null,
+    openBb ? `Institutional Fundamentals: ${JSON.stringify(openBb).slice(0, 200)}` : null,
+    transcript ? `Management commentary: ${transcript.content.slice(0, 300)}` : null,
     secOverview?.sic_description ? `SEC industry classification: ${secOverview.sic_description}.` : null,
     analysis.themes.length > 0 ? `Primary themes detected: ${analysis.themes.join(", ")}.` : null,
   ].filter((item): item is string => Boolean(item));
