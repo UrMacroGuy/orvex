@@ -1,7 +1,9 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService } from "@/services/authService";
+import { useFinancialStore } from "@/store/useFinancialStore";
 
 export interface UseAuthReturn {
   user: ReturnType<typeof useAuthStore.getState>["profile"];
@@ -15,6 +17,8 @@ export interface UseAuthReturn {
 
 export function useAuth(): UseAuthReturn {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const resetFinancialStore = useFinancialStore((state) => state.reset);
   const {
     user,
     profile,
@@ -73,9 +77,12 @@ export function useAuth(): UseAuthReturn {
 
   const handleLogout = useCallback(async () => {
     await authService.logout();
+    queryClient.clear();
+    resetFinancialStore();
     logout();
-    router.push("/login");
-  }, [logout, router]);
+    router.replace("/login");
+    router.refresh();
+  }, [logout, queryClient, resetFinancialStore, router]);
 
   return {
     user: profile,

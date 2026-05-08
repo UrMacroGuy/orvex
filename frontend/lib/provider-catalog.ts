@@ -8,16 +8,23 @@ export interface ProviderCatalogEntry {
 
 export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   {
+    id: "gemini",
+    name: "Google Gemini",
+    description: "Gemini Flash is the recommended low-cost default for open financial intelligence.",
+    recommended: true,
+    docsUrl: "https://makersuite.google.com/app/apikey",
+  },
+  {
     id: "openrouter",
     name: "OpenRouter",
-    description: "Access 100+ models via single API. Recommended for fastest setup.",
-    recommended: true,
+    description: "Access multiple models from one API key.",
+    recommended: false,
     docsUrl: "https://openrouter.ai/keys",
   },
   {
     id: "openai",
     name: "OpenAI",
-    description: "GPT-4, GPT-3.5, and other OpenAI models",
+    description: "GPT family models for synthesis and reasoning",
     recommended: false,
     docsUrl: "https://platform.openai.com/api-keys",
   },
@@ -27,13 +34,6 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
     description: "Claude models for advanced reasoning",
     recommended: false,
     docsUrl: "https://console.anthropic.com/account/keys",
-  },
-  {
-    id: "gemini",
-    name: "Google Gemini",
-    description: "Google's multimodal AI models",
-    recommended: false,
-    docsUrl: "https://makersuite.google.com/app/apikey",
   },
   {
     id: "perplexity",

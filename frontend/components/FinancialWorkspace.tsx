@@ -34,8 +34,6 @@ const MODEL_OPTIONS: Array<ModelSelection & { label: string; provider: string }>
 ];
 
 const DEFAULT_MODELS: ModelSelection[] = [
-  { provider_id: "openai",    model_id: "gpt-4o" },
-  { provider_id: "anthropic", model_id: "claude-sonnet-4-5" },
   { provider_id: "gemini",    model_id: "gemini-2.0-flash" },
 ];
 
@@ -158,7 +156,7 @@ export function FinancialWorkspace() {
       selected_models: selectedModels,
       research_type: researchType,
       ticker: ticker || undefined,
-      web_research: false,
+      web_research: true,
     });
     setQueryText("");
   }, [queryText, selectedModels, isLoading, tickerInput, researchType, mutate, setSelectedTicker]);

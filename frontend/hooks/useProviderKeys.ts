@@ -3,11 +3,17 @@
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { authService, type ProviderKeyRecord } from "@/services/authService";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function useProviderKeys() {
+  const session = useAuthStore((state) => state.session);
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+
   const query = useQuery<ProviderKeyRecord[], Error>({
-    queryKey: ["provider-keys"],
+    queryKey: ["provider-keys", userId],
     queryFn: () => authService.listProviderKeys(),
+    enabled: Boolean(session && userId),
+    staleTime: 30_000,
   });
 
   const refresh = useCallback(async () => {

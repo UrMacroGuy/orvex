@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { decryptSecret, encryptSecret, maskKey } from "@/lib/server/crypto";
 import { runModelCompletion } from "@/lib/server/providers/llm";
+import { formatOpenWebContext, gatherOpenWebContext, type OpenWebContext } from "@/lib/server/providers/open-web";
 import type { FinancialQuery, FinancialSynthesis, ModelResponseOut, ModelSelection, SynthesisOut } from "@/types/financial";
 
 export type QueryStatus = "pending" | "running" | "complete" | "failed";
@@ -18,6 +19,7 @@ export interface ResearchQueryRecord {
     ticker?: string;
     company_name?: string;
     time_horizon?: FinancialQuery["time_horizon"];
+    open_web_context?: OpenWebContext | null;
   };
   status: QueryStatus;
   error: string | null;
@@ -79,7 +81,9 @@ export async function createResearchQuery(input: {
   query: FinancialQuery;
 }) {
   const admin = getSupabaseAdmin() as any;
-  const prompt = buildResearchPrompt(input.query);
+  const openWebContext =
+    input.query.web_research !== false ? await gatherOpenWebContext(input.query) : null;
+  const prompt = buildResearchPrompt(input.query, openWebContext);
 
   const { data, error } = await admin
     .from("research_queries")
@@ -93,6 +97,7 @@ export async function createResearchQuery(input: {
         ticker: input.query.ticker ?? null,
         company_name: input.query.company_name ?? null,
         time_horizon: input.query.time_horizon ?? null,
+        open_web_context: openWebContext,
       },
       status: "pending",
     })
@@ -412,6 +417,7 @@ async function buildFinancialSynthesis(input: {
 }) {
   const fallback = buildFallbackFinancialSynthesis(input.query, input.responses);
   const firstModel = input.responses[0];
+  const openWebContext = input.query.options.open_web_context ?? null;
 
   try {
     const apiKey = await resolveProviderKey(input.userId, firstModel.provider_id);
@@ -420,12 +426,17 @@ async function buildFinancialSynthesis(input: {
       "Return only JSON with keys:",
       "summary, consensus, disagreements, unique_insights, citations, confidence_score, investment_thesis, key_risks, bullish_theses, bearish_theses, consensus_points, contradictions, investment_score, key_questions, next_research_areas.",
       "Use arrays and objects consistent with a financial research UI.",
+      "Ground the answer in the open-web evidence and preserve source citations where possible.",
       `Original prompt:\n${input.query.prompt}`,
       "Model responses:",
       ...input.responses.map(
         (response) =>
           `Provider ${response.provider_id} / ${response.model_id}:\n${response.text ?? ""}`,
       ),
+      openWebContext ? `Open-web citations:\n${openWebContext.citations
+        .slice(0, 12)
+        .map((citation) => `- ${citation.source}: ${citation.title} (${citation.url})`)
+        .join("\n")}` : null,
     ].join("\n\n");
 
     const synthesisResponse = await runModelCompletion({
@@ -469,12 +480,14 @@ async function buildFinancialSynthesis(input: {
   }
 }
 
-function buildResearchPrompt(query: FinancialQuery) {
+function buildResearchPrompt(query: FinancialQuery, openWebContext: OpenWebContext | null) {
   const parts = [
     query.ticker ? `Ticker: ${query.ticker.toUpperCase()}` : null,
     query.company_name ? `Company: ${query.company_name}` : null,
     query.time_horizon ? `Time horizon: ${query.time_horizon}` : null,
     `Research focus: ${query.research_type}`,
+    "Produce: company overview, risk factors, earnings context, bullish vs bearish theses, sentiment read, macro overlay, and a final synthesis.",
+    openWebContext ? `Open-web intelligence:\n${formatOpenWebContext(openWebContext)}` : null,
     "",
     query.query,
   ].filter(Boolean);
@@ -483,6 +496,7 @@ function buildResearchPrompt(query: FinancialQuery) {
 }
 
 function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: ModelResponseOut[]): FinancialSynthesis {
+  const openWebContext = query.options.open_web_context ?? null;
   const excerpts = responses
     .map((response) => (response.text ?? "").split(/\n+/).find(Boolean)?.trim())
     .filter(Boolean)
@@ -490,7 +504,10 @@ function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: 
 
   return {
     ticker: query.options.ticker ?? undefined,
-    summary: excerpts.join(" ") || "Research completed successfully.",
+    summary:
+      excerpts.join(" ") ||
+      openWebContext?.company_overview[0] ||
+      "Research completed successfully.",
     consensus: excerpts.slice(0, 3).map((claim, index) => ({
       id: `consensus-${index + 1}`,
       claim,
@@ -504,14 +521,28 @@ function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: 
       provider_id: response.provider_id,
       model_id: response.model_id,
     })),
-    citations: [],
+    citations: (openWebContext?.citations ?? []).slice(0, 8).map((citation, index) => ({
+      id: `citation-${index + 1}`,
+      title: citation.title,
+      url: citation.url,
+      snippet: citation.source,
+      claim_ids: [],
+    })),
     confidence_score: {
       consensus_agreement: 0.6,
       bullish_confidence: 0.55,
       bearish_confidence: 0.45,
     },
-    investment_thesis: excerpts[0] ?? "Further evidence needed before conviction increases.",
-    key_risks: excerpts[1] ? [excerpts[1]] : [],
+    investment_thesis:
+      excerpts[0] ??
+      openWebContext?.company_overview[0] ??
+      "Further evidence needed before conviction increases.",
+    key_risks:
+      openWebContext?.sec_risks.length
+        ? openWebContext.sec_risks.slice(0, 4)
+        : excerpts[1]
+          ? [excerpts[1]]
+          : [],
     bullish_theses: responses.slice(0, 2).map((response, index) => ({
       id: `bull-${index + 1}`,
       title: `${response.provider_id} upside case`,
@@ -542,8 +573,12 @@ function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: 
     })),
     contradictions: [],
     investment_score: 0.2,
-    key_questions: [],
-    next_research_areas: [],
+    key_questions:
+      openWebContext?.news.slice(0, 2).map((item) => `Validate: ${item}`) ?? [],
+    next_research_areas: [
+      ...(openWebContext?.macro.length ? ["Track macro series changes from FRED overlays."] : []),
+      ...(openWebContext?.reddit.length ? ["Watch sentiment shifts across investing communities."] : []),
+    ],
   };
 }
 

@@ -1,21 +1,20 @@
 <claude-mem-context>
 # Memory Context
 
-# [orvex] recent context, 2026-05-08 2:08pm GMT+5:30
+# [orvex] recent context, 2026-05-08 2:36pm GMT+5:30
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (15,350t read) | 268,473t work | 94% savings
+Stats: 50 obs (15,705t read) | 270,377t work | 94% savings
 
 ### May 6, 2026
 S2 Orvex MVP Backend Implementation — Full Python/FastAPI Backend Written from Architecture to Working Scaffold (May 6, 9:53 AM)
 S1 Orvex MVP — Complete Production-Ready Architecture Design for Multi-Model Intelligence Orchestration Platform (May 6, 9:53 AM)
 S4 ORVEX frontend-backend API contract alignment — fix mismatched routes, payload shapes, and SSE stream URL (May 6, 10:08 AM)
 ### May 8, 2026
-155 7:00a 🔴 models/query.py migrated from postgresql.UUID+JSONB to sa.Uuid+sa.JSON
-156 " 🔴 models/synthesis.py migrated from postgresql.UUID+JSONB to sa.Uuid+sa.JSON
+156 7:00a 🔴 models/synthesis.py migrated from postgresql.UUID+JSONB to sa.Uuid+sa.JSON
 157 " 🔵 FinancialService: Fire-and-Forget Task + DB-Poll Streaming Architecture
 158 " 🔴 models/response.py migrated — all ORM models now use cross-dialect sa.Uuid
 160 " 🔵 Financial Router Has 11 Routes Across Data + Research Endpoints
@@ -69,6 +68,7 @@ S9 Continue session - review and verify Orvex financial workspace implementation
 202 12:28p 🔵 Orvex Stack Confirmed: Next.js 16.2.4 Frontend, Python Backend with EventBus
 203 12:29p 🔵 Uvicorn Backend Running with Hot-Reload; app\db\session.py Recently Modified
 204 " 🔵 EventBus Architecture: In-Memory SSE Pub/Sub with Late-Subscriber Safety
+205 2:09p ⚖️ Orvex Architecture Migration: Next.js + FastAPI → Vercel + Supabase Native
 
-Access 268k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 270k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

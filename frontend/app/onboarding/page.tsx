@@ -21,7 +21,7 @@ export default function OnboardingPage() {
   const { hasProviderKeys, isLoading: keysLoading, refresh } = useProviderKeys();
   const [step, setStep] = useState<Step>("welcome");
   const [selectedProviders, setSelectedProviders] = useState<Set<string>>(
-    new Set(["openrouter"])
+    new Set(["gemini"])
   );
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);

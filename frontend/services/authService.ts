@@ -103,16 +103,27 @@ export const authService = {
     return data;
   },
 
-  onAuthStateChange(callback: (user: User | null) => Promise<void> | void) {
+  onAuthStateChange(
+    callback: (
+      event: AuthChangeEvent,
+      session: Session | null,
+      user: User | null,
+    ) => Promise<void> | void,
+  ) {
     const supabase = createSupabaseBrowserClient();
-    return supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
-      await callback(session?.user ?? null);
+    return supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      await callback(event, session, session?.user ?? null);
     });
   },
 
   async logout() {
     const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signOut();
+    await fetch("/api/auth/signout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+
+    const { error } = await supabase.auth.signOut({ scope: "local" });
 
     if (error) {
       throw error;

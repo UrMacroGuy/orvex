@@ -1,4 +1,11 @@
 import type { MarketSnapshot } from "@/types/financial";
+import {
+  getYahooCompanyProfile,
+  getYahooEarnings,
+  getYahooMarketSnapshot,
+  getYahooQuote,
+  searchYahooTickers,
+} from "@/lib/server/providers/yahoo";
 
 export interface TickerLookup {
   symbol: string;
@@ -134,79 +141,59 @@ async function finnhubMarketSnapshot(): Promise<MarketSnapshot> {
 
 export async function searchTickers(query: string, limit: number) {
   const provider = getConfiguredMarketProvider();
-  if (!provider) {
-    return [];
-  }
 
   if (provider === "finnhub") {
     return finnhubSearch(query, limit);
   }
 
-  return [];
+  return searchYahooTickers(query, limit);
 }
 
 export async function getQuote(symbol: string) {
   const provider = getConfiguredMarketProvider();
-  if (!provider) {
-    return null;
-  }
 
   if (provider === "finnhub") {
-    return finnhubQuote(symbol);
+    const quote = await finnhubQuote(symbol);
+    if (quote) {
+      return quote;
+    }
   }
 
-  return null;
+  return getYahooQuote(symbol);
 }
 
 export async function getCompanyProfile(symbol: string) {
   const provider = getConfiguredMarketProvider();
-  if (!provider) {
-    return null;
-  }
 
   if (provider === "finnhub") {
-    return finnhubCompany(symbol);
+    const company = await finnhubCompany(symbol);
+    if (company) {
+      return company;
+    }
   }
 
-  return null;
+  return getYahooCompanyProfile(symbol);
 }
 
 export async function getEarnings(symbol: string, limit: number) {
   const provider = getConfiguredMarketProvider();
-  if (!provider) {
-    return [];
-  }
 
   if (provider === "finnhub") {
-    return finnhubEarnings(symbol, limit);
+    const earnings = await finnhubEarnings(symbol, limit);
+    if (earnings.length > 0) {
+      return earnings;
+    }
   }
 
-  return [];
+  return getYahooEarnings(symbol, limit);
 }
 
 export async function getMarketSnapshot() {
   const provider = getConfiguredMarketProvider();
-  if (!provider) {
-    return {
-      indices: [
-        { symbol: "SPY", name: "S&P 500", price: 530.12, change_percent: 0.42 },
-        { symbol: "QQQ", name: "NASDAQ 100", price: 458.73, change_percent: 0.61 },
-        { symbol: "DIA", name: "Dow Jones", price: 396.55, change_percent: 0.18 },
-      ],
-      top_gainers: [],
-      top_losers: [],
-      sector_performance: [],
-    } satisfies MarketSnapshot;
-  }
 
   if (provider === "finnhub") {
     return finnhubMarketSnapshot();
   }
 
-  return {
-    indices: [],
-    top_gainers: [],
-    top_losers: [],
-    sector_performance: [],
-  } satisfies MarketSnapshot;
+  return getYahooMarketSnapshot();
 }

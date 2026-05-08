@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService } from "@/services/authService";
+import { useFinancialStore } from "@/store/useFinancialStore";
 
 export default function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     let mounted = true;
 
     const store = useAuthStore.getState();
+    const resetFinancialStore = useFinancialStore.getState().reset;
 
     const initialize = async () => {
       store.setLoading(true);
@@ -31,21 +38,30 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
 
     void initialize();
 
-    const { data } = authService.onAuthStateChange(async (user) => {
+    const { data } = authService.onAuthStateChange(async (event, session, user) => {
       if (!mounted) return;
-      const session = await authService.getSession();
-      const profile = await authService.getProfile();
+
+      if (event === "SIGNED_OUT") {
+        queryClient.clear();
+        resetFinancialStore();
+        store.logout();
+        router.refresh();
+        return;
+      }
+
       store.setSession(session);
       store.setUser(user);
-      store.setProfile(profile);
+      store.setProfile(user ? await authService.getProfile() : null);
+      store.setError(null);
       store.setLoading(false);
+      router.refresh();
     });
 
     return () => {
       mounted = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient, router]);
 
   return <>{children}</>;
 }
