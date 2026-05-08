@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/server/auth";
+import { getRouteError, requireProviderAccess } from "@/lib/server/auth";
 import { searchTickers } from "@/lib/server/providers/market";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    await requireProviderAccess();
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q");
     const limit = Number(searchParams.get("limit") ?? "10");
@@ -18,10 +18,10 @@ export async function GET(request: Request) {
     const data = await searchTickers(q, limit);
     return NextResponse.json({ data });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to search tickers";
+    const routeError = getRouteError(error, "Failed to search tickers");
     return NextResponse.json(
-      { error: { message } },
-      { status: message === "Unauthorized" ? 401 : 500 },
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
     );
   }
 }

@@ -11,6 +11,8 @@ export const config = {
     "/login",
     "/signup",
     "/onboarding",
+    "/settings/api-keys",
+    "/research/:path*",
     "/dashboard/:path*",
     "/financial/:path*",
   ],

@@ -27,7 +27,7 @@ function OAuthCallbackContent() {
         setUser(response.user ?? null);
         setProfile(await authService.getProfile());
 
-        router.push("/onboarding");
+        router.push(await authService.getPostAuthRedirectPath());
       } catch (err) {
         const message = err instanceof Error ? err.message : "OAuth callback failed";
         setError(message);

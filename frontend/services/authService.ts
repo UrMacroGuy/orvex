@@ -4,6 +4,16 @@ import { APP_URL } from "@/lib/env";
 import { apiFetch } from "@/lib/api";
 import type { AuthProfile } from "@/store/useAuthStore";
 
+export interface ProviderKeyRecord {
+  id: string;
+  provider_id: string;
+  label: string;
+  masked: string;
+  last_validated: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const authService = {
   async register(email: string, password: string, name: string) {
     const supabase = createSupabaseBrowserClient();
@@ -118,5 +128,18 @@ export const authService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+
+  async listProviderKeys() {
+    return apiFetch<ProviderKeyRecord[]>("/api/keys");
+  },
+
+  async hasProviderKeys() {
+    const keys = await this.listProviderKeys();
+    return keys.length > 0;
+  },
+
+  async getPostAuthRedirectPath() {
+    return (await this.hasProviderKeys()) ? "/financial" : "/onboarding";
   },
 };

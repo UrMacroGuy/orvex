@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useFinancialStore } from "@/store/useFinancialStore";
 import { useTickerData, useMarketSnapshot, useFinancialQuery } from "@/hooks/useFinancial";
+import { useProviderKeys } from "@/hooks/useProviderKeys";
 import { useAuth } from "@/hooks/useAuth";
 import { ConsensusIndicator } from "./financial/ConsensusIndicator";
 import { BullishCasePanel, BearishCasePanel } from "./financial/CasePanel";
@@ -103,7 +105,9 @@ function InvestmentScore({ score }: { score: number }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function FinancialWorkspace() {
+  const router                  = useRouter();
   const { user, logout }       = useAuth();
+  const { hasProviderKeys, isLoading: keysLoading } = useProviderKeys();
   const selectedTicker         = useFinancialStore((s) => s.selectedTicker);
   const setSelectedTicker      = useFinancialStore((s) => s.setSelectedTicker);
   const synthesis              = useFinancialStore((s) => s.synthesis);
@@ -165,6 +169,29 @@ export function FinancialWorkspace() {
 
   const responseEntries = Object.entries(streamingResponses);
   const hasResults      = synthesis !== null || responseEntries.length > 0;
+  const showKeyEmptyState = !keysLoading && !hasProviderKeys;
+
+  if (showKeyEmptyState) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#080c14] px-6 text-slate-200">
+        <div className="w-full max-w-xl rounded-[2rem] border border-slate-800/70 bg-slate-950/80 p-10 text-center shadow-2xl shadow-black/30">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-500/30 bg-sky-500/10">
+            <TrendingUp className="h-7 w-7 text-sky-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Configure provider API keys to start analysis</h1>
+          <p className="mt-3 text-sm leading-relaxed text-slate-400">
+            Orvex needs at least one connected model provider before financial research can run.
+          </p>
+          <button
+            onClick={() => router.push("/settings/api-keys")}
+            className="mt-8 inline-flex items-center justify-center rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-500"
+          >
+            Open API Settings
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#080c14] text-slate-200">

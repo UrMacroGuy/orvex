@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { ensureProfile, requireAuthenticatedUser } from "@/lib/server/auth";
+import {
+  ensureProfile,
+  getRouteError,
+  requireProviderAccess,
+} from "@/lib/server/auth";
 import { createResearchQuery, listResearchQueries } from "@/lib/server/research";
 import type { FinancialQuery } from "@/types/financial";
 
@@ -7,7 +11,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAuthenticatedUser();
+    const user = await requireProviderAccess();
     await ensureProfile(user);
     const body = (await request.json()) as FinancialQuery;
 
@@ -25,24 +29,24 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ data: { id: created.id } }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create research";
+    const routeError = getRouteError(error, "Failed to create research");
     return NextResponse.json(
-      { error: { message } },
-      { status: message === "Unauthorized" ? 401 : 500 },
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
     );
   }
 }
 
 export async function GET() {
   try {
-    const user = await requireAuthenticatedUser();
+    const user = await requireProviderAccess();
     const queries = await listResearchQueries(user.id);
     return NextResponse.json({ data: { items: queries, next_cursor: null } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to list research";
+    const routeError = getRouteError(error, "Failed to list research");
     return NextResponse.json(
-      { error: { message } },
-      { status: message === "Unauthorized" ? 401 : 500 },
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
     );
   }
 }

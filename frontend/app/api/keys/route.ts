@@ -1,6 +1,26 @@
 import { NextResponse } from "next/server";
-import { ensureProfile, requireAuthenticatedUser } from "@/lib/server/auth";
+import {
+  ensureProfile,
+  getRouteError,
+  listProviderKeys,
+  requireAuthenticatedUser,
+} from "@/lib/server/auth";
 import { storeProviderKey } from "@/lib/server/research";
+
+export async function GET() {
+  try {
+    const user = await requireAuthenticatedUser();
+    await ensureProfile(user);
+    const keys = await listProviderKeys(user.id);
+    return NextResponse.json({ data: keys });
+  } catch (error) {
+    const routeError = getRouteError(error, "Failed to load API keys");
+    return NextResponse.json(
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
+    );
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -29,10 +49,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ data: { ok: true } }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to store API key";
+    const routeError = getRouteError(error, "Failed to store API key");
     return NextResponse.json(
-      { error: { message } },
-      { status: message === "Unauthorized" ? 401 : 500 },
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
     );
   }
 }

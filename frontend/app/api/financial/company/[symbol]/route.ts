@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/server/auth";
+import { getRouteError, requireProviderAccess } from "@/lib/server/auth";
 import { getCompanyProfile } from "@/lib/server/providers/market";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function GET(
   context: { params: Promise<{ symbol: string }> },
 ) {
   try {
-    await requireAuthenticatedUser();
+    await requireProviderAccess();
     const { symbol } = await context.params;
     const company = await getCompanyProfile(symbol.toUpperCase());
 
@@ -19,10 +19,10 @@ export async function GET(
 
     return NextResponse.json({ data: company });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch company";
+    const routeError = getRouteError(error, "Failed to fetch company");
     return NextResponse.json(
-      { error: { message } },
-      { status: message === "Unauthorized" ? 401 : 500 },
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
     );
   }
 }

@@ -1,72 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { useProviderKeys } from "@/hooks/useProviderKeys";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ProviderOnboardingCard } from "@/components/ProviderOnboardingCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const PROVIDERS = [
-  {
-    id: "openrouter",
-    name: "OpenRouter",
-    description: "Access 100+ models via single API. Recommended for fastest setup.",
-    recommended: true,
-    docsUrl: "https://openrouter.ai/keys",
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    description: "GPT-4, GPT-3.5, and other OpenAI models",
-    recommended: false,
-    docsUrl: "https://platform.openai.com/api-keys",
-  },
-  {
-    id: "anthropic",
-    name: "Anthropic",
-    description: "Claude models for advanced reasoning",
-    recommended: false,
-    docsUrl: "https://console.anthropic.com/account/keys",
-  },
-  {
-    id: "gemini",
-    name: "Google Gemini",
-    description: "Google's multimodal AI models",
-    recommended: false,
-    docsUrl: "https://makersuite.google.com/app/apikey",
-  },
-  {
-    id: "perplexity",
-    name: "Perplexity",
-    description: "Web-connected AI for real-time research",
-    recommended: false,
-    docsUrl: "https://www.perplexity.ai/settings/api",
-  },
-  {
-    id: "groq",
-    name: "Groq",
-    description: "Lightning-fast inference engine",
-    recommended: false,
-    docsUrl: "https://console.groq.com/keys",
-  },
-  {
-    id: "together",
-    name: "Together AI",
-    description: "Open-source models on demand",
-    recommended: false,
-    docsUrl: "https://www.together.ai/",
-  },
-  {
-    id: "mistral",
-    name: "Mistral",
-    description: "Efficient European AI models",
-    recommended: false,
-    docsUrl: "https://console.mistral.ai/api-keys/",
-  },
-];
+import { PROVIDER_CATALOG } from "@/lib/provider-catalog";
+import { authService } from "@/services/authService";
 
 type Step = "welcome" | "providers" | "keys" | "complete";
 
@@ -74,6 +18,7 @@ export default function OnboardingPage() {
   useRequireAuth();
   const router = useRouter();
   const { user } = useAuth();
+  const { hasProviderKeys, isLoading: keysLoading, refresh } = useProviderKeys();
   const [step, setStep] = useState<Step>("welcome");
   const [selectedProviders, setSelectedProviders] = useState<Set<string>>(
     new Set(["openrouter"])
@@ -81,6 +26,12 @@ export default function OnboardingPage() {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!keysLoading && hasProviderKeys) {
+      router.replace("/financial");
+    }
+  }, [hasProviderKeys, keysLoading, router]);
 
   const handleProviderToggle = (providerId: string) => {
     const updated = new Set(selectedProviders);
@@ -101,8 +52,6 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      const { authService } = await import("@/services/authService");
-
       const entries = Array.from(selectedProviders)
         .filter((providerId) => apiKeys[providerId])
         .map((providerId) => ({
@@ -115,6 +64,7 @@ export default function OnboardingPage() {
         await authService.saveProviderKey(entry);
       }
 
+      await refresh();
       setStep("complete");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save API keys");
@@ -124,7 +74,7 @@ export default function OnboardingPage() {
   };
 
   const handleComplete = () => {
-    router.push("/");
+    router.push("/financial");
   };
 
   return (
@@ -161,7 +111,7 @@ export default function OnboardingPage() {
               </Button>
 
               <Button
-                onClick={() => setStep("complete")}
+                onClick={() => router.push("/settings/api-keys")}
                 variant="outline"
                 className="ml-4 border-slate-700 text-slate-300"
               >
@@ -180,7 +130,7 @@ export default function OnboardingPage() {
               <h2 className="text-2xl font-light mb-8 text-white">Select Providers</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {PROVIDERS.map((provider) => (
+                {PROVIDER_CATALOG.map((provider) => (
                   <ProviderOnboardingCard
                     key={provider.id}
                     provider={provider}
@@ -226,7 +176,7 @@ export default function OnboardingPage() {
 
               <div className="space-y-6 mb-8">
                 {Array.from(selectedProviders).map((providerId) => {
-                  const provider = PROVIDERS.find((p) => p.id === providerId);
+                  const provider = PROVIDER_CATALOG.find((p) => p.id === providerId);
                   if (!provider) return null;
 
                   return (

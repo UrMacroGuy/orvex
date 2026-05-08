@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/server/auth";
+import { getRouteError, requireProviderAccess } from "@/lib/server/auth";
 import { getResearchResult } from "@/lib/server/research";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function GET(
   context: { params: Promise<{ queryId: string }> },
 ) {
   try {
-    const user = await requireAuthenticatedUser();
+    const user = await requireProviderAccess();
     const { queryId } = await context.params;
     const result = await getResearchResult(user.id, queryId);
 
@@ -19,10 +19,10 @@ export async function GET(
 
     return NextResponse.json({ data: result });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch research";
+    const routeError = getRouteError(error, "Failed to fetch research");
     return NextResponse.json(
-      { error: { message } },
-      { status: message === "Unauthorized" ? 401 : 500 },
+      { error: { message: routeError.message, code: routeError.code } },
+      { status: routeError.status },
     );
   }
 }

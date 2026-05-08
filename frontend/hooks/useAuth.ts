@@ -38,7 +38,7 @@ export function useAuth(): UseAuthReturn {
         setSession(response.session ?? null);
         setUser(response.user ?? null);
         setProfile(await authService.getProfile());
-        router.push("/financial");
+        router.push(await authService.getPostAuthRedirectPath());
       } catch (err) {
         const message = err instanceof Error ? err.message : "Login failed";
         setError(message);
