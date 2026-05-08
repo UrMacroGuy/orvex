@@ -108,6 +108,24 @@ export async function requireProviderAccess(): Promise<AuthenticatedUser> {
   return user;
 }
 
+export async function getOptionalProviderKey(userId: string, providerId: string) {
+  const admin = getSupabaseAdmin() as any;
+  const { data, error } = await admin
+    .from("provider_keys")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("provider_id", providerId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? null;
+}
+
 export function getRouteError(error: unknown, fallbackMessage: string) {
   if (error instanceof RouteGuardError) {
     return { status: error.status, message: error.message, code: error.code };

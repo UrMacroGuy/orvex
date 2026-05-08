@@ -25,6 +25,7 @@ import { ModelSelection, ResearchType } from "@/types/financial";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const MODEL_OPTIONS: Array<ModelSelection & { label: string; provider: string }> = [
+  { provider_id: "orvex",     model_id: "open-web-intelligence", label: "Free Intelligence Mode", provider: "Orvex" },
   { provider_id: "openai",    model_id: "gpt-4o",            label: "GPT-4o",           provider: "OpenAI" },
   { provider_id: "openai",    model_id: "gpt-4o-mini",       label: "GPT-4o Mini",      provider: "OpenAI" },
   { provider_id: "anthropic", model_id: "claude-sonnet-4-5", label: "Sonnet 4.5",       provider: "Anthropic" },
@@ -34,7 +35,7 @@ const MODEL_OPTIONS: Array<ModelSelection & { label: string; provider: string }>
 ];
 
 const DEFAULT_MODELS: ModelSelection[] = [
-  { provider_id: "gemini",    model_id: "gemini-2.0-flash" },
+  { provider_id: "orvex",     model_id: "open-web-intelligence" },
 ];
 
 const RESEARCH_TYPES: Array<{ value: ResearchType; label: string }> = [
@@ -47,6 +48,7 @@ const RESEARCH_TYPES: Array<{ value: ResearchType; label: string }> = [
 ];
 
 const PROVIDER_DOT: Record<string, string> = {
+  orvex:      "bg-sky-400",
   openai:     "bg-emerald-400",
   anthropic:  "bg-orange-400",
   gemini:     "bg-blue-400",
@@ -167,29 +169,7 @@ export function FinancialWorkspace() {
 
   const responseEntries = Object.entries(streamingResponses);
   const hasResults      = synthesis !== null || responseEntries.length > 0;
-  const showKeyEmptyState = !keysLoading && !hasProviderKeys;
-
-  if (showKeyEmptyState) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#080c14] px-6 text-slate-200">
-        <div className="w-full max-w-xl rounded-[2rem] border border-slate-800/70 bg-slate-950/80 p-10 text-center shadow-2xl shadow-black/30">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-500/30 bg-sky-500/10">
-            <TrendingUp className="h-7 w-7 text-sky-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Configure provider API keys to start analysis</h1>
-          <p className="mt-3 text-sm leading-relaxed text-slate-400">
-            Orvex needs at least one connected model provider before financial research can run.
-          </p>
-          <button
-            onClick={() => router.push("/settings/api-keys")}
-            className="mt-8 inline-flex items-center justify-center rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-500"
-          >
-            Open API Settings
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const showFreeModeBanner = !keysLoading && !hasProviderKeys;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#080c14] text-slate-200">
@@ -425,6 +405,27 @@ export function FinancialWorkspace() {
           </div>
         </header>
 
+        {showFreeModeBanner && (
+          <div className="flex-shrink-0 border-b border-sky-900/40 bg-sky-950/30 px-6 py-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">
+                  Free Intelligence Mode
+                </p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Open-web intelligence is active now. Connect premium AI providers only if you want upgraded model orchestration.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push("/settings/api-keys")}
+                className="inline-flex items-center justify-center rounded-xl border border-sky-700/60 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:border-sky-500 hover:text-white"
+              >
+                Connect Premium AI Providers
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Error Banner */}
         {storeError && (
           <div className="flex-shrink-0 flex items-start gap-3 px-6 py-3 bg-rose-950/30 border-b border-rose-900/40">
@@ -449,8 +450,7 @@ export function FinancialWorkspace() {
               </div>
               <h2 className="text-lg font-bold text-white">Financial Intelligence</h2>
               <p className="text-sm text-slate-500 max-w-sm leading-relaxed">
-                Enter a ticker and research question in the sidebar, select your AI models, and
-                run an analysis to see synthesized insights.
+                Enter a ticker and research question in the sidebar. Free Intelligence Mode uses SEC, Yahoo, news, Reddit, and macro data immediately, and premium providers are optional.
               </p>
               <div className="flex gap-3 mt-2 flex-wrap justify-center">
                 {["NVDA earnings outlook", "AAPL valuation thesis", "BTC macro risks"].map((s) => (

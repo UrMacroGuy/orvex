@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getRouteError, requireProviderAccess } from "@/lib/server/auth";
+import { getRouteError, requireAuthenticatedUser } from "@/lib/server/auth";
 import { getMarketSnapshot } from "@/lib/server/providers/market";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await requireProviderAccess();
+    await requireAuthenticatedUser();
     const data = await getMarketSnapshot();
     return NextResponse.json({ data });
   } catch (error) {

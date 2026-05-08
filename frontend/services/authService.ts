@@ -151,6 +151,6 @@ export const authService = {
   },
 
   async getPostAuthRedirectPath() {
-    return (await this.hasProviderKeys()) ? "/financial" : "/onboarding";
+    return "/financial";
   },
 };

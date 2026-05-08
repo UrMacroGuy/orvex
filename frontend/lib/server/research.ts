@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { decryptSecret, encryptSecret, maskKey } from "@/lib/server/crypto";
 import { runModelCompletion } from "@/lib/server/providers/llm";
 import { formatOpenWebContext, gatherOpenWebContext, type OpenWebContext } from "@/lib/server/providers/open-web";
+import { getOptionalProviderKey } from "@/lib/server/auth";
 import type { FinancialQuery, FinancialSynthesis, ModelResponseOut, ModelSelection, SynthesisOut } from "@/types/financial";
 
 export type QueryStatus = "pending" | "running" | "complete" | "failed";
@@ -190,22 +191,10 @@ export async function transitionQueryToRunning(userId: string, queryId: string) 
 }
 
 async function resolveProviderKey(userId: string, providerId: string) {
-  const admin = getSupabaseAdmin() as any;
-  const { data, error } = await admin
-    .from("provider_keys")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("provider_id", providerId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
+  const data = await getOptionalProviderKey(userId, providerId);
 
   if (!data) {
-    throw new Error(`No API key configured for provider '${providerId}'`);
+    return null;
   }
 
   return decryptSecret({
@@ -213,6 +202,36 @@ async function resolveProviderKey(userId: string, providerId: string) {
     iv: data.iv,
     authTag: data.auth_tag,
   });
+}
+
+function buildOpenWebModelResponse(query: ResearchQueryRecord): string {
+  const openWebContext = query.options.open_web_context;
+  const sectionEntries: Array<[string, string[]]> = [
+    ["Company overview", openWebContext?.company_overview ?? []],
+    ["SEC risk factors", openWebContext?.sec_risks ?? []],
+    ["Earnings context", openWebContext?.earnings_summary ?? []],
+    ["News aggregation", openWebContext?.news ?? []],
+    ["Reddit sentiment", openWebContext?.reddit ?? []],
+    ["Macro overlay", openWebContext?.macro ?? []],
+  ];
+
+  const sections = sectionEntries
+    .filter(([, lines]) => lines.length > 0)
+    .map(([title, lines]) => `${title}:\n${lines.map((line) => `- ${line}`).join("\n")}`);
+
+  if (sections.length === 0) {
+    return "Open-web intelligence mode completed, but source aggregation returned limited structured context.";
+  }
+
+  return sections.join("\n\n");
+}
+
+function isFreeModel(selection: ModelSelection) {
+  return selection.provider_id === "orvex";
+}
+
+function getMissingProviderMessage(selection: ModelSelection) {
+  return `No API key configured for ${selection.provider_id}. Use Free Intelligence Mode immediately, or connect a premium provider in Settings.`;
 }
 
 export async function executeResearchQuery(input: {
@@ -240,13 +259,29 @@ export async function executeResearchQuery(input: {
       const started = Date.now();
 
       try {
-        const apiKey = await resolveProviderKey(input.userId, selection.provider_id);
-        const result = await runModelCompletion({
-          providerId: selection.provider_id,
-          modelId: selection.model_id,
-          apiKey,
-          prompt: input.query.prompt,
-        });
+        let result;
+
+        if (isFreeModel(selection)) {
+          result = {
+            text: buildOpenWebModelResponse(input.query),
+            usage: {
+              input_tokens: 0,
+              output_tokens: 0,
+            },
+          };
+        } else {
+          const apiKey = await resolveProviderKey(input.userId, selection.provider_id);
+          if (!apiKey && selection.provider_id !== "gemini") {
+            throw new Error(getMissingProviderMessage(selection));
+          }
+
+          result = await runModelCompletion({
+            providerId: selection.provider_id,
+            modelId: selection.model_id,
+            apiKey,
+            prompt: input.query.prompt,
+          });
+        }
 
         const responseRecord = normalizeResponse({
           id: randomUUID(),
@@ -310,22 +345,61 @@ export async function executeResearchQuery(input: {
   const successful = responses.filter((response) => response.status === "ok" && response.text);
 
   if (successful.length === 0) {
+    const fallbackResponse = normalizeResponse({
+      id: randomUUID(),
+      query_id: input.query.id,
+      provider_id: "orvex",
+      model_id: "open-web-intelligence",
+      status: "ok",
+      text: buildOpenWebModelResponse(input.query),
+      latency_ms: 0,
+      input_tokens: 0,
+      output_tokens: 0,
+      error: null,
+      error_code: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    responses.push(fallbackResponse);
+    await persistResponse(fallbackResponse);
+    await input.onEvent({
+      type: "model_completed",
+      query_id: input.query.id,
+      response: fallbackResponse,
+    });
+
+    await input.onEvent({
+      type: "synthesis_started",
+      query_id: input.query.id,
+    });
+
+    const synthesized = await buildFinancialSynthesis({
+      userId: input.userId,
+      query: input.query,
+      responses: [fallbackResponse],
+    });
+
+    const synthesisRecord = await persistSynthesis(input.query.id, synthesized);
+
     await admin
       .from("research_queries")
       .update({
-        status: "failed",
-        error: "All selected models failed. Check your API keys and provider model IDs.",
+        status: "complete",
+        error: null,
         completed_at: new Date().toISOString(),
       })
       .eq("id", input.query.id);
 
     await input.onEvent({
-      type: "error",
+      type: "synthesis_ready",
       query_id: input.query.id,
-      error: {
-        code: "provider_error",
-        message: "All selected models failed. Check your API keys and provider model IDs.",
-      },
+      synthesis: synthesisRecord.synthesis,
+      financial_synthesis: synthesisRecord.financial_synthesis,
+    });
+    await input.onEvent({
+      type: "done",
+      query_id: input.query.id,
     });
     return;
   }
@@ -420,6 +494,10 @@ async function buildFinancialSynthesis(input: {
   const openWebContext = input.query.options.open_web_context ?? null;
 
   try {
+    if (firstModel.provider_id === "orvex") {
+      throw new Error("Skip premium synthesis");
+    }
+
     const apiKey = await resolveProviderKey(input.userId, firstModel.provider_id);
     const prompt = [
       "Synthesize these financial model responses into strict JSON.",
@@ -545,7 +623,7 @@ function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: 
           : [],
     bullish_theses: responses.slice(0, 2).map((response, index) => ({
       id: `bull-${index + 1}`,
-      title: `${response.provider_id} upside case`,
+      title: `${response.provider_id === "orvex" ? "Open-web" : response.provider_id} upside case`,
       confidence: 0.6,
       supporting_points: [(response.text ?? "").slice(0, 180)],
       growth_catalysts: [],
@@ -555,7 +633,7 @@ function buildFallbackFinancialSynthesis(query: ResearchQueryRecord, responses: 
     })),
     bearish_theses: responses.slice(0, 2).map((response, index) => ({
       id: `bear-${index + 1}`,
-      title: `${response.provider_id} risk case`,
+      title: `${response.provider_id === "orvex" ? "Open-web" : response.provider_id} risk case`,
       confidence: 0.45,
       supporting_points: [(response.text ?? "").slice(0, 180)],
       risks: [],

@@ -58,7 +58,7 @@ export default function ApiKeysSettingsPage() {
               </p>
               <h1 className="mt-2 text-3xl font-semibold text-white">Provider API Keys</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Store at least one provider key to unlock the financial research workspace.
+                Free Intelligence Mode works without any provider key. Add premium provider keys here only if you want upgraded AI synthesis.
               </p>
             </div>
             <div className="flex gap-3">
@@ -67,8 +67,7 @@ export default function ApiKeysSettingsPage() {
               </Button>
               <Button
                 onClick={() => router.push("/financial")}
-                disabled={!hasProviderKeys}
-                className="bg-sky-600 text-white hover:bg-sky-500 disabled:opacity-50"
+                className="bg-sky-600 text-white hover:bg-sky-500"
               >
                 Open Financial Dashboard
               </Button>
@@ -76,8 +75,8 @@ export default function ApiKeysSettingsPage() {
           </div>
 
           {!hasProviderKeys && !isLoading ? (
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
-              Configure provider API keys to start analysis.
+            <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-100">
+              Free Intelligence Mode is active. Connect premium AI providers here whenever you want deeper model orchestration.
             </div>
           ) : null}
 

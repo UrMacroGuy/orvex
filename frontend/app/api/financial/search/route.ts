@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getRouteError, requireProviderAccess } from "@/lib/server/auth";
+import { getRouteError, requireAuthenticatedUser } from "@/lib/server/auth";
 import { searchTickers } from "@/lib/server/providers/market";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    await requireProviderAccess();
+    await requireAuthenticatedUser();
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q");
     const limit = Number(searchParams.get("limit") ?? "10");

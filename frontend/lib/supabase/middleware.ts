@@ -48,35 +48,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    const { count, error } = await supabase
-      .from("provider_keys")
-      .select("id", { head: true, count: "exact" })
-      .eq("user_id", user.id);
-
-    if (error) {
-      throw error;
-    }
-
-    const hasProviderKeys = (count ?? 0) > 0;
-
     if (authPath || homePath) {
-      const url = request.nextUrl.clone();
-      url.pathname = hasProviderKeys ? "/financial" : "/onboarding";
-      return NextResponse.redirect(url);
-    }
-
-    if (
-      !hasProviderKeys &&
-      (pathname.startsWith("/financial") ||
-        pathname.startsWith("/dashboard") ||
-        pathname.startsWith("/research"))
-    ) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/onboarding";
-      return NextResponse.redirect(url);
-    }
-
-    if (hasProviderKeys && onboardingPath) {
       const url = request.nextUrl.clone();
       url.pathname = "/financial";
       return NextResponse.redirect(url);

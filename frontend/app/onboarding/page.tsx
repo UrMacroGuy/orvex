@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,20 +18,12 @@ export default function OnboardingPage() {
   useRequireAuth();
   const router = useRouter();
   const { user } = useAuth();
-  const { hasProviderKeys, isLoading: keysLoading, refresh } = useProviderKeys();
+  const { hasProviderKeys, refresh } = useProviderKeys();
   const [step, setStep] = useState<Step>("welcome");
-  const [selectedProviders, setSelectedProviders] = useState<Set<string>>(
-    new Set(["gemini"])
-  );
+  const [selectedProviders, setSelectedProviders] = useState<Set<string>>(new Set(["gemini"]));
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!keysLoading && hasProviderKeys) {
-      router.replace("/financial");
-    }
-  }, [hasProviderKeys, keysLoading, router]);
 
   const handleProviderToggle = (providerId: string) => {
     const updated = new Set(selectedProviders);
@@ -77,6 +69,10 @@ export default function OnboardingPage() {
     router.push("/financial");
   };
 
+  const handleSkipToFreeMode = () => {
+    router.push("/financial");
+  };
+
   return (
     <div className="min-h-screen bg-black py-12 px-4">
       <div className="max-w-3xl mx-auto">
@@ -93,30 +89,31 @@ export default function OnboardingPage() {
                 Welcome to Orvex, {user?.name}!
               </h1>
               <p className="text-xl text-slate-400 mb-12">
-                Let&apos;s set up your AI providers to orchestrate intelligence
+                Start with free open-web intelligence now, then connect premium AI only if you want it.
               </p>
 
               <div className="space-y-4 mb-8">
                 <p className="text-slate-300">
-                  You&apos;ll need API keys from at least one provider. We recommend starting with
-                  OpenRouter for the fastest setup.
+                  Orvex already gives you SEC analysis, Yahoo Finance data, macro overlays, and news plus Reddit sentiment without any API key.
                 </p>
               </div>
 
-              <Button
-                onClick={() => setStep("providers")}
-                className="bg-sky-600 hover:bg-sky-700 text-white px-8 py-6 text-lg"
-              >
-                Continue Setup
-              </Button>
+              <div className="flex flex-col justify-center gap-4 sm:flex-row">
+                <Button
+                  onClick={handleSkipToFreeMode}
+                  className="bg-sky-600 hover:bg-sky-700 text-white px-8 py-6 text-lg"
+                >
+                  Use Free Intelligence Mode
+                </Button>
 
-              <Button
-                onClick={() => router.push("/settings/api-keys")}
-                variant="outline"
-                className="ml-4 border-slate-700 text-slate-300"
-              >
-                Skip for Now
-              </Button>
+                <Button
+                  onClick={() => setStep("providers")}
+                  variant="outline"
+                  className="border-slate-700 text-slate-300 px-8 py-6 text-lg"
+                >
+                  Connect Premium AI Providers
+                </Button>
+              </div>
             </motion.div>
           )}
 
@@ -127,7 +124,10 @@ export default function OnboardingPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <h2 className="text-2xl font-light mb-8 text-white">Select Providers</h2>
+              <h2 className="text-2xl font-light mb-3 text-white">Connect Premium AI Providers</h2>
+              <p className="mb-8 text-sm text-slate-400">
+                Free Intelligence Mode is already available. Add keys here only for premium synthesis and model orchestration.
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {PROVIDER_CATALOG.map((provider) => (
@@ -149,6 +149,13 @@ export default function OnboardingPage() {
                   Back
                 </Button>
                 <Button
+                  onClick={handleSkipToFreeMode}
+                  variant="outline"
+                  className="border-slate-700 text-slate-300"
+                >
+                  Skip for now
+                </Button>
+                <Button
                   onClick={() => setStep("keys")}
                   disabled={selectedProviders.size === 0}
                   className="bg-sky-600 hover:bg-sky-700 text-white flex-1"
@@ -166,7 +173,10 @@ export default function OnboardingPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <h2 className="text-2xl font-light mb-8 text-white">Add API Keys</h2>
+              <h2 className="text-2xl font-light mb-3 text-white">Add API Keys</h2>
+              <p className="mb-8 text-sm text-slate-400">
+                These keys are optional upgrades. Free Intelligence Mode will keep working without them.
+              </p>
 
               {error && (
                 <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400">
@@ -192,7 +202,7 @@ export default function OnboardingPage() {
                           rel="noopener noreferrer"
                           className="text-sky-400 hover:text-sky-300 text-sm"
                         >
-                          Get key →
+                          Get key {"->"}
                         </a>
                       </div>
 
@@ -217,6 +227,14 @@ export default function OnboardingPage() {
                   disabled={isSubmitting}
                 >
                   Back
+                </Button>
+                <Button
+                  onClick={handleSkipToFreeMode}
+                  variant="outline"
+                  className="border-slate-700 text-slate-300"
+                  disabled={isSubmitting}
+                >
+                  Skip for now
                 </Button>
                 <Button
                   onClick={handleSubmitKeys}
@@ -265,10 +283,10 @@ export default function OnboardingPage() {
 
               <h2 className="text-3xl font-light mb-4 text-white">You&apos;re all set!</h2>
               <p className="text-lg text-slate-400 mb-12">
-                Your account is ready to orchestrate AI intelligence across{" "}
-                {selectedProviders.size > 0
-                  ? `${selectedProviders.size} provider${selectedProviders.size !== 1 ? "s" : ""}`
-                  : "multiple providers"}
+                Your account is ready for open financial intelligence
+                {hasProviderKeys
+                  ? ` with ${selectedProviders.size} premium provider${selectedProviders.size !== 1 ? "s" : ""} connected.`
+                  : "."}
               </p>
 
               <Button

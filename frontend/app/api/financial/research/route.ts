@@ -2,29 +2,36 @@ import { NextResponse } from "next/server";
 import {
   ensureProfile,
   getRouteError,
-  requireProviderAccess,
+  requireAuthenticatedUser,
 } from "@/lib/server/auth";
 import { createResearchQuery, listResearchQueries } from "@/lib/server/research";
-import type { FinancialQuery } from "@/types/financial";
+import type { FinancialQuery, ModelSelection } from "@/types/financial";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const user = await requireProviderAccess();
+    const user = await requireAuthenticatedUser();
     await ensureProfile(user);
     const body = (await request.json()) as FinancialQuery;
+    const selectedModels: ModelSelection[] =
+      Array.isArray(body.selected_models) && body.selected_models.length > 0
+        ? body.selected_models
+        : [{ provider_id: "orvex", model_id: "open-web-intelligence" }];
 
-    if (!body.query || !Array.isArray(body.selected_models) || body.selected_models.length === 0) {
+    if (!body.query) {
       return NextResponse.json(
-        { error: { message: "query and selected_models are required" } },
+        { error: { message: "query is required" } },
         { status: 400 },
       );
     }
 
     const created = await createResearchQuery({
       userId: user.id,
-      query: body,
+      query: {
+        ...body,
+        selected_models: selectedModels,
+      },
     });
 
     return NextResponse.json({ data: { id: created.id } }, { status: 201 });
@@ -39,7 +46,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const user = await requireProviderAccess();
+    const user = await requireAuthenticatedUser();
     const queries = await listResearchQueries(user.id);
     return NextResponse.json({ data: { items: queries, next_cursor: null } });
   } catch (error) {

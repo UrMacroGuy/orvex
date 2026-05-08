@@ -63,7 +63,7 @@ export function useAuth(): UseAuthReturn {
         setSession(response.session ?? null);
         setUser(response.user ?? null);
         setProfile(await authService.getProfile());
-        router.push(response.session ? "/onboarding" : "/login");
+        router.push(response.session ? "/financial" : "/login");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Signup failed";
         setError(message);

@@ -2,7 +2,7 @@ export type ResearchType = 'stock' | 'earnings' | 'macro' | 'sector' | 'company'
 export type TimeHorizon = 'intraday' | 'short_term' | 'medium_term' | 'long_term';
 
 export interface ModelSelection {
-  provider_id: 'openai' | 'anthropic' | 'gemini' | 'openrouter';
+  provider_id: 'orvex' | 'openai' | 'anthropic' | 'gemini' | 'openrouter';
   model_id: string;
 }
 

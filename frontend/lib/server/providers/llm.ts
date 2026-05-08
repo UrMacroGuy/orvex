@@ -8,6 +8,25 @@ export interface ProviderResult {
   usage?: ProviderUsage;
 }
 
+function resolveServerProviderApiKey(providerId: string) {
+  switch (providerId) {
+    case "openai":
+      return process.env.OPENAI_API_KEY ?? null;
+    case "anthropic":
+      return process.env.ANTHROPIC_API_KEY ?? null;
+    case "gemini":
+      return (
+        process.env.GEMINI_API_KEY ??
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
+        null
+      );
+    case "openrouter":
+      return process.env.OPENROUTER_API_KEY ?? null;
+    default:
+      return null;
+  }
+}
+
 async function postJson(url: string, init: RequestInit) {
   const response = await fetch(url, {
     ...init,
@@ -25,18 +44,23 @@ async function postJson(url: string, init: RequestInit) {
 export async function runModelCompletion(input: {
   providerId: string;
   modelId: string;
-  apiKey: string;
+  apiKey?: string | null;
   prompt: string;
 }) {
+  const resolvedInput = {
+    ...input,
+    apiKey: input.apiKey ?? resolveServerProviderApiKey(input.providerId),
+  };
+
   switch (input.providerId) {
     case "openai":
-      return runOpenAI(input);
+      return runOpenAI(resolvedInput);
     case "anthropic":
-      return runAnthropic(input);
+      return runAnthropic(resolvedInput);
     case "gemini":
-      return runGemini(input);
+      return runGemini(resolvedInput);
     case "openrouter":
-      return runOpenRouter(input);
+      return runOpenRouter(resolvedInput);
     default:
       throw new Error(`Unsupported provider: ${input.providerId}`);
   }
@@ -45,9 +69,13 @@ export async function runModelCompletion(input: {
 async function runOpenAI(input: {
   providerId: string;
   modelId: string;
-  apiKey: string;
+  apiKey?: string | null;
   prompt: string;
 }): Promise<ProviderResult> {
+  if (!input.apiKey) {
+    throw new Error("OpenAI API key is not configured");
+  }
+
   const data = await postJson("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -83,9 +111,13 @@ async function runOpenAI(input: {
 async function runAnthropic(input: {
   providerId: string;
   modelId: string;
-  apiKey: string;
+  apiKey?: string | null;
   prompt: string;
 }): Promise<ProviderResult> {
+  if (!input.apiKey) {
+    throw new Error("Anthropic API key is not configured");
+  }
+
   const data = await postJson("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -117,9 +149,13 @@ async function runAnthropic(input: {
 async function runGemini(input: {
   providerId: string;
   modelId: string;
-  apiKey: string;
+  apiKey?: string | null;
   prompt: string;
 }): Promise<ProviderResult> {
+  if (!input.apiKey) {
+    throw new Error("Gemini API key is not configured");
+  }
+
   const data = await postJson(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(input.modelId)}:generateContent?key=${encodeURIComponent(input.apiKey)}`,
     {
@@ -155,9 +191,13 @@ async function runGemini(input: {
 async function runOpenRouter(input: {
   providerId: string;
   modelId: string;
-  apiKey: string;
+  apiKey?: string | null;
   prompt: string;
 }): Promise<ProviderResult> {
+  if (!input.apiKey) {
+    throw new Error("OpenRouter API key is not configured");
+  }
+
   const data = await postJson("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
