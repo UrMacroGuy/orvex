@@ -1,4 +1,4 @@
-export type ResearchType = 'stock' | 'earnings' | 'macro' | 'sector' | 'company' | 'crypto';
+export type ResearchType = 'stock' | 'earnings' | 'macro' | 'sector' | 'company' | 'crypto' | 'thematic' | 'market';
 export type TimeHorizon = 'intraday' | 'short_term' | 'medium_term' | 'long_term';
 
 export interface ModelSelection {
@@ -125,6 +125,8 @@ export interface StreamEvent {
 
 export interface FinancialSynthesis {
   ticker?: string;
+  direct_answer?: string;
+  company_or_theme_context: string[];
   summary: string;
   consensus: SynthesisOut['consensus'];
   disagreements: SynthesisOut['disagreements'];
@@ -137,11 +139,19 @@ export interface FinancialSynthesis {
   };
   investment_thesis: string;
   key_risks: string[];
+  market_sentiment: string[];
+  macro_impact: string[];
+  key_catalysts: string[];
+  ai_consensus?: string;
   bullish_theses: BullishThesis[];
   bearish_theses: BearishThesis[];
   consensus_points: ConsensusPoint[];
   contradictions: Contradiction[];
   investment_score: number;
+  confidence_detail?: {
+    score: number;
+    explanation: string;
+  };
   key_questions: string[];
   next_research_areas: string[];
 }

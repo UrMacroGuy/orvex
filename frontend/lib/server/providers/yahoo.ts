@@ -275,3 +275,39 @@ export async function getYahooMarketSnapshot(): Promise<MarketSnapshot> {
     ],
   };
 }
+
+export async function getYahooQuotes(symbols: string[]): Promise<QuoteData[]> {
+  const normalized = [...new Set(symbols.map((symbol) => symbol.trim()).filter(Boolean))];
+  if (normalized.length === 0) return [];
+
+  const data = await yahooFetch<{
+    quoteResponse?: {
+      result?: Array<{
+        symbol?: string;
+        regularMarketPrice?: number;
+        regularMarketChangePercent?: number;
+        regularMarketDayHigh?: number;
+        regularMarketDayLow?: number;
+        regularMarketVolume?: number;
+        marketCap?: number;
+      }>;
+    };
+  }>(
+    `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(normalized.join(","))}`,
+    300,
+  );
+
+  return (data.quoteResponse?.result ?? [])
+    .filter((item): item is NonNullable<typeof item> & { symbol: string; regularMarketPrice: number } =>
+      Boolean(item?.symbol && typeof item.regularMarketPrice === "number"),
+    )
+    .map((item) => ({
+      symbol: item.symbol,
+      current_price: item.regularMarketPrice,
+      change_percent: Number(item.regularMarketChangePercent ?? 0),
+      high_price: Number(item.regularMarketDayHigh ?? 0) || null,
+      low_price: Number(item.regularMarketDayLow ?? 0) || null,
+      volume: Number(item.regularMarketVolume ?? 0) || null,
+      market_cap: Number(item.marketCap ?? 0) || null,
+    }));
+}

@@ -165,6 +165,7 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
               disagreements: s.disagreements,
               unique_insights: s.unique_insights,
               citations: s.citations,
+              company_or_theme_context: [],
               confidence_score: {
                 consensus_agreement: 0,
                 bullish_confidence: 0,
@@ -172,6 +173,9 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
               },
               investment_thesis: "",
               key_risks: [],
+              market_sentiment: [],
+              macro_impact: [],
+              key_catalysts: [],
               bullish_theses: [],
               bearish_theses: [],
               consensus_points: [],
