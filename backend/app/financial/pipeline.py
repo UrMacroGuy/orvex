@@ -9,6 +9,8 @@ from app.orchestration.normalizer import NormalizedResponse
 from app.orchestration.pipeline import OrchestrationPipeline
 from app.providers.registry import ProviderRegistry
 from app.providers.registry import registry as default_registry
+from .registry import registry as entity_registry
+from .relevance_filter import RelevanceFilter
 from app.schemas.financial import (
     CompanyProfile,
     FinancialQueryCreate,
@@ -62,7 +64,10 @@ class FinancialOrchestrationPipeline:
         payload: FinancialQueryCreate,
     ) -> FinancialPipelineResult:
         """Execute full financial research pipeline."""
-
+        
+        # --- HARD ENTITY LOCKING ---
+        entity = entity_registry.get_entity(payload.ticker)
+        
         selected_models = [
             ModelSelection(provider_id=provider_id, model_id=model_id)
             for provider_id, model_id in payload.selected_models
@@ -70,7 +75,7 @@ class FinancialOrchestrationPipeline:
 
         options = QueryOptions(
             web_research=payload.include_web_research,
-            system_prompt=self._build_financial_prompt(payload.ticker),
+            system_prompt=self._build_financial_prompt(entity),
         )
 
         log.info(
@@ -84,27 +89,29 @@ class FinancialOrchestrationPipeline:
             selected_models=selected_models,
             options=options,
         )
+        
+        filtered_responses = RelevanceFilter.filter_responses(pipe_result.responses, entity)
 
         company = CompanyProfile(
-            symbol=payload.ticker,
-            name=payload.ticker,
-            description="",
+            symbol=entity.ticker if entity else payload.ticker,
+            name=entity.company_name if entity else payload.ticker,
+            description=f"Sector: {entity.sector}, Country: {entity.country}" if entity else "",
         )
 
         context = FinancialContext(
             ticker=payload.ticker,
             company_info=company,
-            responses=pipe_result.responses,
+            responses=filtered_responses,
         )
 
         market_research = self._market_research.analyze(context)
-        bullish_theses = self._bullish.extract(pipe_result.responses)
-        bearish_theses = self._bearish.extract(pipe_result.responses)
+        bullish_theses = self._bullish.extract(filtered_responses)
+        bearish_theses = self._bearish.extract(filtered_responses)
         consensus_points = self._consensus.detect(
-            pipe_result.responses, focus_areas=payload.focus_areas
+            filtered_responses, focus_areas=payload.focus_areas
         )
         contradictions = self._contradiction.extract(
-            pipe_result.responses, focus_areas=payload.focus_areas
+            filtered_responses, focus_areas=payload.focus_areas
         )
 
         investment_score = self._calculate_investment_score(
@@ -143,19 +150,28 @@ class FinancialOrchestrationPipeline:
         )
 
     @staticmethod
-    def _build_financial_prompt(ticker: str) -> str:
-        """Build specialized financial analysis prompt."""
-        return f"""You are a professional financial analyst. Provide a comprehensive investment analysis for {ticker}.
+    def _build_financial_prompt(entity: Optional[object]) -> str:
+        """Build specialized financial analysis prompt with entity grounding."""
+        if not entity:
+            return "You are a financial analyst. Provide objective, grounded analysis."
+            
+        return f"""You are a professional financial analyst specialized in {entity.sector} in {entity.country}.
+Provide a comprehensive investment analysis for {entity.company_name} ({entity.ticker}).
+
+STRICT RULES:
+1. FOCUS ONLY ON: {entity.company_name}, {entity.sector}, {entity.country}, and these macro drivers: {', '.join(entity.macro_drivers)}.
+2. REJECT: Unrelated sectors (e.g., AI/Semiconductors unless directly relevant), generic market noise, and unrelated news.
+3. BE SPECIFIC: Use facts related to {entity.keywords}.
 
 Structure your response to include:
 1. Company Analysis: Business model, competitive position, key metrics
 2. Sector Analysis: Industry trends, competitive landscape
-3. Macro Analysis: Economic factors, interest rates, industry headwinds
-4. Bullish Case: Growth catalysts, valuation opportunities, competitive advantages
-5. Bearish Case: Risks, valuation concerns, macro threats
+3. Macro Analysis: Focus on: {', '.join(entity.macro_drivers)}
+4. Bullish Case: Growth catalysts, valuation opportunities
+5. Bearish Case: Risks, valuation concerns
 6. Investment Thesis: Overall assessment and key takeaways
 
-Be specific, data-driven, and distinguish between facts and opinions."""
+Be data-driven and maintain an institutional tone."""
 
     @staticmethod
     def _calculate_investment_score(
