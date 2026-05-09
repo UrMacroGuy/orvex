@@ -1,5 +1,5 @@
 import React from 'react';
-import { IntelligenceSignal } from '@/app/workspace-layout';
+import { useIntelligenceStore } from '@/store/useIntelligenceStore';
 
 const severityColors: Record<string, string> = {
   low: 'text-slate-500',
@@ -9,48 +9,26 @@ const severityColors: Record<string, string> = {
 };
 
 export const IntelligenceFeed: React.FC = () => {
-  // In production, this would be hooked to a query/socket from the FinancialSynthesis backend
-  const signals: IntelligenceSignal[] = [
-    {
-      id: '1',
-      ticker: 'MSFT',
-      companyName: 'Microsoft Corporation',
-      category: 'Strategic Infrastructure',
-      severity: 'high',
-      confidence: 0.92,
-      title: 'Data Center Energy Procurement',
-      summary: 'Shift in regional power procurement strategy observed.',
-      interpretation: 'Increasing focus on energy independence for AI compute scale.',
-      detectedAt: '2026-05-09 14:00'
-    },
-    {
-      id: '2',
-      ticker: 'NVDA',
-      companyName: 'NVIDIA Corporation',
-      category: 'Supply Chain',
-      severity: 'critical',
-      confidence: 0.88,
-      title: 'Foundry Capacity Reallocation',
-      summary: 'Internal indicators suggest shifting capacity toward Blackwell architecture.',
-      interpretation: 'Accelerating product cycle, potentially impacting supply for current Gen AI models.',
-      detectedAt: '2026-05-09 11:30'
-    }
-  ];
+  const { signals } = useIntelligenceStore();
 
   return (
     <div className="max-w-4xl w-full mx-auto">
       <div className="flex justify-between items-end mb-8">
-        <h2 className="text-white text-xl font-bold tracking-wide">Operational Intelligence</h2>
-        <span className="text-xs text-[#333] font-mono tracking-wider">LIVE FEED - SECURE CHANNEL</span>
+        <h2 className="text-white text-xl font-bold tracking-wide">Live Intelligence Signals</h2>
+        <span className="text-xs text-[#333] font-mono tracking-wider">SECURE MONITORING ACTIVE</span>
       </div>
       
+      {signals.length === 0 && (
+        <div className="text-[#333] text-sm text-center py-20">Monitoring systems active. Waiting for signal ingestion...</div>
+      )}
+
       {signals.map((signal) => (
         <div key={signal.id} className="group bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-6 mb-4 hover:border-[#2a2a2a] transition-all">
           <div className="flex justify-between mb-4">
             <div>
-              <span className="text-white font-semibold">{signal.ticker}</span>
+              <span className="text-white font-semibold">{signal.entity.name}</span>
               <span className="mx-2 text-[#333]">|</span>
-              <span className="text-xs text-[#666] uppercase">{signal.category}</span>
+              <span className="text-xs text-[#666] uppercase">{signal.signalType}</span>
             </div>
             <div className="text-right">
               <div className={`text-sm font-bold ${severityColors[signal.severity]}`}>
@@ -69,7 +47,7 @@ export const IntelligenceFeed: React.FC = () => {
           
           <div className="mt-4 pt-4 border-t border-[#1a1a1a] flex justify-between items-center text-[10px] font-mono text-[#333]">
             <span>{signal.detectedAt}</span>
-            <button className="hover:text-cyan-500 transition-colors">View Dossier →</button>
+            <button className="hover:text-cyan-500 transition-colors">View Deep Intelligence →</button>
           </div>
         </div>
       ))}

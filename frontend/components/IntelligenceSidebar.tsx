@@ -4,39 +4,40 @@ import Link from 'next/link';
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
-  { label: 'Intelligence Feed', href: '/dashboard', icon: '📡' },
-  { label: 'Competitors', href: '/market', icon: '🎯' },
-  { label: 'Signals', href: '/signals', icon: '⚡' },
-  { label: 'Market Maps', href: '/maps', icon: '🗺️' },
-  { label: 'Dossiers', href: '/financial', icon: '📚' },
-  { label: 'Alerts', href: '/alerts', icon: '🔔' },
+  { label: 'Intelligence Feed', href: '/dashboard' },
+  { label: 'Competitors', href: '/competitors' },
+  { label: 'Signals', href: '/signals' },
+  { label: 'Dossiers', href: '/dossiers' },
+  { label: 'Watchlists', href: '/watchlists' },
+  { label: 'Alerts', href: '/alerts' },
+  { label: 'Pipelines', href: '/pipelines' },
+  { label: 'Reports', href: '/reports' },
 ];
 
 export const IntelligenceSidebar: React.FC = () => {
   return (
-    <aside className="w-64 bg-[#0a0a0a] border-r border-[#1a1a1a] h-screen flex flex-col text-[#a1a1a1]">
-      <div className="p-6 border-b border-[#1a1a1a]">
-        <h1 className="text-white font-bold tracking-wider">ORVEX</h1>
+    <aside className="w-64 bg-[#0a0a0a] border-r border-[#1a1a1a] h-screen flex flex-col text-[#666]">
+      <div className="p-8 border-b border-[#1a1a1a]">
+        <h1 className="text-white font-bold tracking-widest text-lg">ORVEX</h1>
+        <p className="text-[9px] text-[#333] uppercase mt-1 tracking-[0.2em]">Institutional Intelligence</p>
       </div>
-      <nav className="flex-1 py-6">
+      <nav className="flex-1 py-8">
         {navItems.map((item) => (
           <Link 
             key={item.label}
             href={item.href}
-            className="flex items-center px-6 py-3 hover:bg-[#151515] hover:text-cyan-400 transition-colors duration-200"
+            className="flex items-center px-8 py-3 text-sm hover:text-white transition-colors duration-200"
           >
-            <span className="mr-3">{item.icon}</span>
             {item.label}
           </Link>
         ))}
       </nav>
-      <div className="p-6 border-t border-[#1a1a1a]">
-        <Link href="/settings" className="flex items-center text-sm hover:text-white">
-          ⚙️ Settings
+      <div className="p-8 border-t border-[#1a1a1a]">
+        <Link href="/settings" className="text-sm hover:text-white">
+          Settings
         </Link>
       </div>
     </aside>

@@ -1,11 +1,7 @@
 "use client";
 
-import { IntelligenceFeed } from "@/components/IntelligenceFeed";
+import { IntelligenceDashboard } from "@/components/IntelligenceDashboard";
 
 export default function Dashboard() {
-  return (
-    <div className="flex flex-col gap-8">
-      <IntelligenceFeed />
-    </div>
-  );
+  return <IntelligenceDashboard />;
 }
