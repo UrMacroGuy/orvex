@@ -1,42 +1,52 @@
 "use client";
 
-import { ProviderSidebar } from "@/components/ProviderSidebar";
-import { Settings, Bell } from "lucide-react";
+import React, { useState } from 'react';
+import { IntelligenceSidebar } from "@/components/IntelligenceSidebar";
+import { Bell, Search } from "lucide-react";
 
-interface LayoutButtonProps {
-  children: React.ReactNode;
-  className?: string;
+// Types for the intelligence platform
+export type SignalSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface IntelligenceSignal {
+  id: string;
+  ticker: string;
+  companyName: string;
+  category: string;
+  severity: SignalSeverity;
+  confidence: number;
+  title: string;
+  summary: string;
+  interpretation: string;
+  detectedAt: string;
 }
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-200">
-      <ProviderSidebar />
-      <div className="flex-1 flex flex-col h-full">
-        <header className="h-16 border-b border-slate-800/60 bg-slate-950/50 backdrop-blur-xl flex items-center px-8 justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold tracking-tighter text-white">ORVEX</h1>
-            <div className="h-4 w-px bg-slate-800" />
-            <span className="text-xs text-slate-500 font-medium tracking-wide uppercase">
-              Research Engine
-            </span>
+    <div className="flex h-screen overflow-hidden bg-[#0a0a0a] text-[#a1a1a1]">
+      <IntelligenceSidebar />
+      <div className="flex-1 flex flex-col h-full bg-[#050505]">
+        <header className="h-16 border-b border-[#1a1a1a] flex items-center px-8 justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-white">
+              <Search className="w-4 h-4" />
+              <input 
+                type="text" 
+                placeholder="Global Intelligence Search..." 
+                className="bg-transparent border-none outline-none text-sm w-64 placeholder-[#333]" 
+              />
+            </div>
           </div>
           <div className="flex items-center gap-4">
-            <LayoutButton><Bell className="w-4 h-4" /></LayoutButton>
-            <LayoutButton><Settings className="w-4 h-4" /></LayoutButton>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500" />
+            <button className="p-2 hover:bg-[#151515] rounded-md transition-colors">
+              <Bell className="w-4 h-4" />
+            </button>
+            <div className="w-8 h-8 rounded-full bg-cyan-900 border border-cyan-800" />
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-12 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/50 via-slate-950 to-slate-950">
+        <main className="flex-1 overflow-y-auto p-12">
           {children}
         </main>
       </div>
     </div>
   );
-}
-
-function LayoutButton({ children, className = "" }: LayoutButtonProps) {
-  const base =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-slate-900";
-  return <button className={`${base} ${className}`}>{children}</button>;
 }
